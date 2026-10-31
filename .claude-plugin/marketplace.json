@@ -4,7 +4,7 @@
     "name": "nchungdev",
     "url": "https://github.com/nchungdev"
   },
-  "description": "Universal suite of 13 production-grade AI Agent Skills: GitHub Project v2 lifecycle & anti-rate-limit task workflow, FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), and hardsub OCR extraction & subtitle synchronization (Hardsub Extractor).",
+  "description": "Universal suite of 14 production-grade AI Agent Skills: GitHub Project v2 lifecycle & anti-rate-limit task workflow, FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), hardsub OCR extraction & subtitle synchronization (Hardsub Extractor), and interactive Clean Architecture, 6-Gate execution harness & DevSecOps hook guard (Project Pro).",
   "plugins": [
     {
       "name": "ffmpeg-toolkit",
@@ -245,6 +245,33 @@
         "tasks",
         "spec",
         "graphql"
+      ]
+    },
+    {
+      "name": "project-pro",
+      "displayName": "Project Pro — Clean Architecture, Reference Repos & Multi-Agent Architect",
+      "source": "./plugins/project-pro",
+      "description": "Interactive checkbox project base architect, 6-Gate task execution harness, Clean Architecture / MVI / MVVM / TCA / BLoC / FSD standardizer, SOLID & pragmatic DRY enforcer, famous reference-repo lookup, zero-dependency secret/OWASP scanner, and Git/AI runtime hook guard across Android, KMP, Flutter, iOS, Web, Python, Go, and NestJS.",
+      "version": "1.0.0",
+      "license": "MIT",
+      "keywords": [
+        "project-pro",
+        "clean-architecture",
+        "mvi",
+        "mvvm",
+        "solid",
+        "dry",
+        "kmp",
+        "android",
+        "flutter",
+        "ios",
+        "react",
+        "fastapi",
+        "golang",
+        "nestjs",
+        "agents-md",
+        "devsecops",
+        "hooks"
       ]
     }
   ]

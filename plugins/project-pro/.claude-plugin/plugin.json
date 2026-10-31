@@ -1,0 +1,28 @@
+{
+  "name": "project-pro",
+  "displayName": "Project Pro — Clean Architecture, Reference Repos & Multi-Agent Architect",
+  "version": "1.0.0",
+  "description": "Interactive checkbox project base architect, 6-Gate task execution harness, Clean Architecture / MVI / MVVM / TCA / BLoC / FSD standardizer, SOLID & pragmatic DRY enforcer, famous reference-repo lookup, zero-dependency secret/OWASP scanner, and Git/AI runtime hook guard across Android, KMP, Flutter, iOS, Web, Python, Go, and NestJS.",
+  "author": {
+    "name": "nchungdev"
+  },
+  "keywords": [
+    "project-pro",
+    "clean-architecture",
+    "mvi",
+    "mvvm",
+    "solid",
+    "dry",
+    "kmp",
+    "android",
+    "flutter",
+    "ios",
+    "react",
+    "fastapi",
+    "golang",
+    "nestjs",
+    "agents-md",
+    "devsecops",
+    "hooks"
+  ]
+}

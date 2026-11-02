@@ -6,8 +6,9 @@
 
 ## Shield 1: Shift-Left Security Rules (During Coding)
 
-1. **Zero Hardcoded Secrets**:
+1. **Zero Hardcoded Secrets & Personal Environment Identifiers**:
    - API keys, Bearer/JWT tokens, OAuth client secrets, signing keystores, and DB URLs with credentials MUST come from validated environment variables or platform secret stores (`Keychain`, `EncryptedSharedPreferences`/`Keystore`, Vault/Secret Manager).
+   - Never hardcode developer LAN IPs (e.g., `192.168.1.13`), static room/pairing/OTP codes (e.g., `883-716`, `482-195`), private/internal domains, or personal physical device serials/model IDs (`R5CX11ABNMH`, `SM-S926B`) as default values in code. Use dynamic discovery, random session generators, or RFC-5737/standard example placeholders in UI hints only.
    - Commit `.env.example` with dummy placeholders only; `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.jks`, `*.keystore`, and `service-account*.json` MUST stay in `.gitignore`.
 2. **Injection & RCE Prevention (OWASP Top 10)**:
    - **SQL**: Use parameterized queries / prepared statements / ORM bound parameters ONLY. Never concatenate or interpolate user strings into SQL (`SELECT ... ${input}` / `f"SELECT ... {input}"`).
@@ -22,7 +23,7 @@
 ## Shield 2: Built-In Zero-Dependency Scanner (`project_pro.py audit`)
 
 `project_pro.py audit` scans either the **staged git index (`--staged`)** or the **entire repository**:
-- **Secret Signatures**: RSA/EC/OpenSSH/PGP private keys, AWS (`AKIA...`), Google/Firebase (`AIza...`), GitHub PAT (`ghp_...`, `github_pat_...`), Anthropic (`sk-ant-...`), OpenAI (`sk-proj-...`), Slack (`xox...`), Stripe live keys (`sk_live_...`), hardcoded JWTs, credentialed DB URIs (`postgres://user:pass@...`), and literal `password`/`api_key`/`secret` assignments.
+- **Secret & Identifier Signatures**: RSA/EC/OpenSSH/PGP private keys, AWS (`AKIA...`), Google/Firebase (`AIza...`), GitHub PAT (`ghp_...`, `github_pat_...`), Anthropic (`sk-ant-...`), OpenAI (`sk-proj-...`), Slack (`xox...`), Stripe live keys (`sk_live_...`), hardcoded JWTs, credentialed DB URIs (`postgres://user:pass@...`), literal `password`/`api_key`/`secret` assignments, hardcoded developer private LAN IPs (`192.168.x.x` / `172.16-31.x.x` in variable/default assignments), static room/pairing/PIN codes (`xxx-xxx`), and personal hardware serials/identifiers.
 - **Forbidden Sensitive Files**: `.env` variants (except `.example`/`.sample`/`.template`), `.pem`, `.key`, `.p12`, `.jks`, `.keystore`, `id_rsa`, `id_ed25519`.
 - **OWASP Code Heuristics**: Raw SQL string interpolation, unsafe `eval(`/shell interpolation, disabled TLS verification, and unresolved Git conflict markers (`<<<<<<<`).
 - **Clean Architecture & Anti-God-File Gates**: Domain outer-layer/framework import leaks (`[FAIL]`), `> 300 LOC` (`[WARN]`), `> 450 LOC` (`[FAIL]`, auto-skipping generated files).

@@ -44,6 +44,24 @@ SECRET_REGEXES: list[tuple[str, re.Pattern[str]]] = [
             r"\s*[:=]\s*[\"'](?![\"']|\$\{|process\.env|os\.environ|YOUR_|REPLACE_|CHANGE_ME|example|dummy|test|mock|<)[A-Za-z0-9/+_\-=!@#$%^&*]{12,}[\"']"
         ),
     ),
+    (
+        "Hardcoded Private LAN IP in Code Assignment/Default",
+        re.compile(
+            r"(?:[:=]\s*[\"'](?:(?:https?|wss?)://)?|default\w*\s*=\s*[\"']|host\w*\s*=\s*[\"']|url\w*\s*=\s*[\"'])"
+            r"(?:192\.168\.\d{1,3}\.(?!1\b|10\b|50\b|100\b|254\b|255\b)\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})\b"
+        ),
+    ),
+    (
+        "Hardcoded Static Pairing/Room Code Assignment",
+        re.compile(
+            r"(?i)\b(?:room[_-]?code|pairing[_-]?code|verify[_-]?code|pin[_-]?code|otp[_-]?code)\b"
+            r"[^=\n]{0,30}=\s*[\"']\d{3}-\d{3}[\"']"
+        ),
+    ),
+    (
+        "Hardcoded Developer LAN IP / Static Code / Device ID",
+        re.compile(r"\b(?:192\.168\.1\.13|883-716|482-195|R5CX11ABNMH|SM-S926B|samsung-s24|adb\.duinch\.app)\b"),
+    ),
 ]
 
 OWASP_REGEXES: list[tuple[str, str, re.Pattern[str]]] = [
@@ -167,7 +185,7 @@ def audit_project(target: Path, warn_lines: int = 300, max_lines: int = 450, sta
         lines = fpath.read_text(encoding="utf-8", errors="ignore").splitlines()
         scanned_sec += 1
         is_test_or_scanner = any(
-            t in str(rel_file).lower() for t in ("test", "spec", "mock", "fake", "fixture", "auditor.py")
+            t in str(rel_file).lower() for t in ("test", "spec", "mock", "fake", "fixture", "auditor.py", "check_project.py")
         )
 
         for idx, line in enumerate(lines, start=1):

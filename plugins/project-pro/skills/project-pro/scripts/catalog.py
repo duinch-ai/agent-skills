@@ -281,6 +281,6 @@ AGENT_CHOICES: list[tuple[str, str, bool]] = [
 
 SOURCE_EXTENSIONS = {".kt", ".kts", ".dart", ".swift", ".ts", ".tsx", ".js", ".jsx", ".vue", ".py", ".go"}
 IGNORE_DIRS = {
-    ".git", ".githooks", ".agents", ".claude", ".cursor", "node_modules", "build", ".gradle",
+    ".git", ".githooks", ".agents", ".claude", ".cursor", ".idea", ".vscode", "node_modules", "build", ".gradle",
     ".dart_tool", ".build", "DerivedData", "dist", ".next", "__pycache__", ".venv", "venv", "vendor", "Pods",
 }

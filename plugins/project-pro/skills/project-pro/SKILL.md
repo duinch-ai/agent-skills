@@ -35,7 +35,7 @@ Resolve `<SKILL_DIR>` to the directory containing this `SKILL.md`:
 python3 "<SKILL_DIR>/scripts/project_pro.py" detect --target "<PROJECT_DIR>"
 
 # 2. Lookup famous reference repos, patterns & GitHub search queries for a stack
-python3 "<SKILL_DIR>/scripts/project_pro.py" lookup --stack <android|kmp|flutter|ios|web|python|go|nestjs>
+python3 "<SKILL_DIR>/scripts/project_pro.py" lookup --stack <android|kmp|flutter|ios|web|python|go|nestjs|rust>
 
 # 3. Initialize multi-agent harness, 6-Gate rules, Git security hooks & runtime agent guards
 python3 "<SKILL_DIR>/scripts/project_pro.py" init \
@@ -84,6 +84,7 @@ Never guess architecture or base modules. Run `detect`, then present **tickable 
    - iOS: `TCA (pointfreeco/swift-composable-architecture)` | `MVVM + @Observable (nalexn/clean-architecture-swiftui)`
    - Web: `TanStack Query + Zustand (alan2207/bulletproof-react)` | `Feature-Sliced Design (feature-sliced/documentation)` | `Vue Pinia (antfu/vitesse)`
    - Backend: `Domain Router → Service → Repo (fastapi-best-practices / go-clean-template)` | `DDD + Hexagonal + CQRS/UoW (cosmicpython / domain-driven-hexagon)`
+   - Rust: `MVI / Immediate Mode (emilk/egui, iced-rs/iced)` | `Hexagonal Ports & Adapters (LukeMathWalker/zero-to-production)`
 3. **Q3 — Project Base Modules** *(`is_multi_select: true` checkboxes)*:
    - `(Recommended) Core SOLID + Anti-False-DRY + Anti-God-File Cap (300 Warn / 450 Fail LOC)`
    - `(Recommended) Typed Error Handling & Result Wrapper (Result<T, DomainError> / RFC 9457)`
@@ -123,3 +124,14 @@ Execute **every** feature, bugfix, or refactor through all 6 Gates (full details
    - Cover happy, empty, error/offline, and boundary cases with fast **Fakes**.
    - Run `Single Test` → `Lint/Typecheck` → `project_pro.py audit --target "<PROJECT_DIR>" --fail-on-error`. Fix every failure before concluding.
 6. **Gate 6 — Clean Delivery**: Summarize changes by layer alongside actual test, lint, and audit results.
+
+---
+
+## Mode C: GitHub Projects & Parallel Sub-Agent Execution Protocol
+
+Scale multi-step development across autonomous sub-agents with GitHub Projects v2 Kanban:
+1. **Board Setup**: `python3 scripts/workflow.py setup [--public|--private]`
+2. **Create Task**: `python3 scripts/workflow.py new "<Title>" --body "<Specs>"` (places in `Todo`)
+3. **Start Task**: `python3 scripts/workflow.py start <issue_id>` (moves to `In Progress`, creates branch `feat/issue-<id>-...`)
+4. **Dispatch Sub-Agent**: `python3 scripts/workflow.py dispatch <issue_id>` (generates token-efficient English prompt for `invoke_subagent`)
+5. **Complete Task**: `python3 scripts/workflow.py done <issue_id>` (verifies 6-Gate audit green, merges, closes issue, moves to `Done`)

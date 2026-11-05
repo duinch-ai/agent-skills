@@ -249,6 +249,42 @@ STACK_CATALOG: dict[str, dict[str, Any]] = {
             "hexagonal": ["src/shared/domain", "src/shared/core", "src/modules/users/domain", "src/modules/users/application", "src/modules/users/infrastructure", "src/modules/users/presentation", "test"],
         },
     },
+    "rust": {
+        "label": "Rust (Cargo Workspace / Cross-Platform GUI & Core)",
+        "recommended_arch": "modular-clean",
+        "recommended_pattern": "mvi",
+        "patterns": [
+            ("mvi", "Strict UDF / Immediate Mode State Machine (App State + Message Enum + Update/View) — ref: emilk/egui, iced-rs/iced"),
+            ("service-repo", "Clean Architecture / Hexagonal Ports & Adapters (Core Traits + Adapters) — ref: LukeMathWalker/zero-to-production"),
+        ],
+        "repos": [
+            {"repo": "emilk/egui", "url": "https://github.com/emilk/egui", "why": "Immediate-mode GUI in pure Rust, cross-platform Desktop/Web/Wasm, zero-garbage state management."},
+            {"repo": "iced-rs/iced", "url": "https://github.com/iced-rs/iced", "why": "Elm-inspired cross-platform GUI architecture with strict UDF, Command/Subscription, and clean View/Update split."},
+            {"repo": "LukeMathWalker/zero-to-production", "url": "https://github.com/LukeMathWalker/zero-to-production", "why": "Production-grade Rust Clean Architecture, domain modelling, configuration, tracing, and integration tests."},
+        ],
+        "commands": {
+            "build": "cargo build",
+            "test_all": "cargo test --workspace",
+            "test_single": "cargo test -p <crate> -- <test_name>",
+            "lint": "cargo clippy --workspace -- -D warnings && cargo fmt --check",
+            "sec_audit": "cargo audit",
+        },
+        "boundary_tool": "Cargo Workspace crate isolation (`manga-core` pure domain/ports, `manga-ui` presentation, `manga-switch` entrypoint) + cargo-deny",
+        "domain_forbidden_imports": ["eframe", "egui", "sdl2", "winit"],
+        "scaffold_dirs": {
+            "modular-clean": [
+                "crates/manga-core/src/models", "crates/manga-core/src/providers",
+                "crates/manga-core/src/cache", "crates/manga-core/src/reader",
+                "crates/manga-ui/src/views", "crates/manga-ui/src/widgets",
+                "crates/manga-switch/src",
+            ],
+            "clean": [
+                "crates/core/src/domain", "crates/core/src/ports", "crates/core/src/models",
+                "crates/adapters/src/remote", "crates/adapters/src/storage",
+                "crates/app/src/views", "crates/app/src/widgets",
+            ],
+        },
+    },
 }
 
 ARCH_CHOICES: list[tuple[str, str]] = [
@@ -279,8 +315,8 @@ AGENT_CHOICES: list[tuple[str, str, bool]] = [
     ("cursor-ide", "Cursor / Windsurf / Cline / Roo / DeepSeek Rules (.cursor/rules/*.mdc + .clinerules)", False),
 ]
 
-SOURCE_EXTENSIONS = {".kt", ".kts", ".dart", ".swift", ".ts", ".tsx", ".js", ".jsx", ".vue", ".py", ".go"}
+SOURCE_EXTENSIONS = {".kt", ".kts", ".dart", ".swift", ".ts", ".tsx", ".js", ".jsx", ".vue", ".py", ".go", ".rs"}
 IGNORE_DIRS = {
     ".git", ".githooks", ".agents", ".claude", ".cursor", ".idea", ".vscode", "node_modules", "build", ".gradle",
-    ".dart_tool", ".build", "DerivedData", "dist", ".next", "__pycache__", ".venv", "venv", "vendor", "Pods",
+    ".dart_tool", ".build", "DerivedData", "dist", ".next", "__pycache__", ".venv", "venv", "vendor", "Pods", "target",
 }

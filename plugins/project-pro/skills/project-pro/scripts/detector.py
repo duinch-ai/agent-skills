@@ -36,7 +36,9 @@ def detect_project(target: Path) -> dict[str, Any]:
     if existing_profile and existing_profile.get("stack") in STACK_CATALOG:
         detected_stack = existing_profile["stack"]
     elif target.exists():
-        if (target / "pubspec.yaml").is_file():
+        if (target / "Cargo.toml").is_file():
+            detected_stack = "rust"
+        elif (target / "pubspec.yaml").is_file():
             detected_stack = "flutter"
         elif (
             (target / "composeApp").is_dir()

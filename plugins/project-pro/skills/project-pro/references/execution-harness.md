@@ -89,3 +89,21 @@ Add or update fast unit tests covering:
 
 1. If a non-obvious SDK pitfall, build quirk, or user correction surfaced during the task, append a 2-line prevention rule to `.agents/memory/lessons.md`.
 2. Report changes concisely grouped by layer with clickable file links and verification results — zero filler narration or giant pasted code blocks.
+
+---
+
+## 7. GitHub Projects & Parallel Sub-Agent Execution Protocol
+
+To scale development across autonomous sub-agents and maintain strict progress tracking:
+
+1. **1 Task = 1 Atomic GitHub Issue**:
+   - Create issue with clear acceptance criteria and wireframe/contract references.
+   - Attach issue to the project's GitHub Project v2 board in the `Todo` column.
+2. **Status Progression**:
+   - `Todo`: Backlog / ready for intake.
+   - `In Progress`: Agent claims the task via `python3 scripts/workflow.py start <id>`, auto-switches to feature branch `feat/issue-<id>-...`.
+   - `Done`: On passing Gate 5 (Tests + 6-Gate Audit), agent runs `python3 scripts/workflow.py done <id>`, closing the issue and moving the board item to `Done`.
+3. **Parallel Sub-Agent Dispatch**:
+   - **Orchestrator Role**: The Primary Agent identifies independent tasks (e.g. distinct provider adapters or uncoupled UI views).
+   - **English Prompt Discipline**: Sub-agents must receive prompts in concise English to minimize token overhead (50–70% savings).
+   - **Clean Context & Immediate Kill**: Sub-agents operate with 0% historical context bleed; as soon as their task is verified and closed, the Primary Agent immediately terminates them (`manage_subagents kill`).

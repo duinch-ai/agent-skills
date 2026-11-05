@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills Standard](https://img.shields.io/badge/Standard-Agent%20Skills-brightgreen.svg)](https://agentskills.org)
 [![Compatible With](https://img.shields.io/badge/Compatible%20With-Claude%20Code%20|%20Antigravity%20|%20Gemini%20|%20Codex%20|%20Cursor-orange.svg)](#-platform-compatibility)
-[![Total Skills](https://img.shields.io/badge/Skills%20Catalog-14%20Production%20Skills-purple.svg)](#-skills-catalog)
+[![Total Skills](https://img.shields.io/badge/Skills%20Catalog-15%20Production%20Skills-purple.svg)](#-skills-catalog)
 
-> **A curated, production-grade monorepo of 14 modular AI Agent Skills & Plugins crafted by [@nchungdev](https://github.com/nchungdev).**  
+> **A curated, production-grade monorepo of 15 modular AI Agent Skills & Plugins crafted by [@nchungdev](https://github.com/nchungdev).**  
 > Built strictly on the open **Agent Skills Standard (`SKILL.md`)**, ready to install, distribute, and execute across any AI coding assistant or autonomous runtime: **Claude Code, Google Antigravity / Gemini CLI, OpenAI Codex, Cursor, Windsurf**, and custom agent frameworks.
 
 ---
@@ -22,9 +22,9 @@
 
 ---
 
-## 🏛️ Skills Catalog (14 Consolidated Skills)
+## 🏛️ Skills Catalog (15 Consolidated Skills)
 
-The catalog features **14 production-ready Agent Skills**, consolidated into a clean, non-overlapping suite:
+The catalog features **15 production-ready Agent Skills**, consolidated into a clean, non-overlapping suite:
 
 | # | Skill | Superpower & Description | Core Stack / Tooling |
 |:---:|---|---|---|
@@ -42,6 +42,7 @@ The catalog features **14 production-ready Agent Skills**, consolidated into a c
 | 12 | **`hardsub-extractor`** | Autonomous video hardsub extraction and OCR alignment engine: Uses FFmpeg memory streaming and Gemini Multimodal Vision API to extract high-accuracy Vietnamese subtitles with exact timecodes and exports clean .vi.OCR.srt files. | FFmpeg Memory Streaming, Gemini 3.5 Flash Lite Vision, Timecode Snapping, Spanning Deduplication |
 | 13 | **`github-project-workflow`** | Universal GitHub Project v2 lifecycle & task spec workflow engine with anti-rate-limit resilience: Zero-API local spec listing, persistent schema & item caching, 1-point targeted issue queries, offline outbox mutation queue, and unified Markdown status reporting. | GitHub Projects v2, GraphQL, REST Issues, Local-First Spec |
 | 14 | **`project-pro`** | Interactive project base architect, 6-Gate task execution harness, Clean Architecture & UDF standardizer (MVI, MVVM, TCA, BLoC, Riverpod, FSD, Hexagonal), SOLID & pragmatic DRY enforcer, famous open-source reference-repo lookup, persistent cross-session codebase map (`.agents/CODEBASE_MAP.md`), zero-dependency secret/OWASP scanner, and Git/AI runtime anti-bypass hooks (`pre-commit`, `commit-msg`, `pre-push`, `PreToolUse`). | Python 3 Stdlib, Clean Arch, 8 Tech Stacks, Secret/OWASP Scanner, Git & Agent Hooks |
+| 15 | **`dailylog`** | Long-term memory shared by every agent: automatic session records through hooks at zero model tokens, daily logs, project state, durable knowledge, decision records and a weekly history, with diacritic-insensitive search and secret refusal. | Python 3 Stdlib, Claude Code / Codex / Antigravity Hooks, Markdown |
 
 ---
 
@@ -130,9 +131,10 @@ ln -s ~/.agent-skills/plugins/github-project-workflow/skills/github-project-work
 ```
 agent-skills/
 ├── .claude-plugin/
-│   └── marketplace.json            # Claude Code Marketplace Manifest (14 plugins)
+│   └── marketplace.json            # Claude Code Marketplace Manifest (15 plugins)
 ├── install.sh                      # Universal multi-agent installation script
 ├── plugins/
+│   ├── dailylog/                   # Long-term memory shared by every agent
 │   ├── project-pro/                # Interactive Clean Arch, 6-Gate harness & DevSecOps hooks
 │   ├── github-project-workflow/    # GitHub Project v2 lifecycle, spec workflow & rate-limit shield
 │   ├── project-bootstrap/          # Cross-agent project bootstrapper & AGENTS.md conventions

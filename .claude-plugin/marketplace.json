@@ -4,7 +4,7 @@
     "name": "nchungdev",
     "url": "https://github.com/nchungdev"
   },
-  "description": "Universal suite of 14 production-grade AI Agent Skills: GitHub Project v2 lifecycle & anti-rate-limit task workflow, FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), hardsub OCR extraction & subtitle synchronization (Hardsub Extractor), and interactive Clean Architecture, 6-Gate execution harness & DevSecOps hook guard (Project Pro).",
+  "description": "Universal suite of 15 production-grade AI Agent Skills: GitHub Project v2 lifecycle & anti-rate-limit task workflow, FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), hardsub OCR extraction & subtitle synchronization (Hardsub Extractor), and interactive Clean Architecture, 6-Gate execution harness & DevSecOps hook guard (Project Pro).",
   "plugins": [
     {
       "name": "ffmpeg-toolkit",
@@ -271,6 +271,21 @@
         "nestjs",
         "agents-md",
         "devsecops",
+        "hooks"
+      ]
+    },
+    {
+      "name": "dailylog",
+      "displayName": "Dailylog — Long-Term Memory Shared by Every Agent",
+      "source": "./plugins/dailylog",
+      "description": "Records every agent session automatically through hooks at zero model tokens, and builds a shared long-term knowledge base (index, projects, knowledge, decisions, weekly logs) across Claude Code, Codex, Antigravity, Gemini CLI and any agent that reads AGENTS.md.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": [
+        "memory",
+        "daily-log",
+        "knowledge-base",
+        "multi-agent",
         "hooks"
       ]
     }

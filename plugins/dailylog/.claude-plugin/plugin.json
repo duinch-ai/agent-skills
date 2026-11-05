@@ -1,0 +1,10 @@
+{
+  "name": "dailylog",
+  "displayName": "Dailylog — Long-Term Memory Shared by Every Agent",
+  "version": "0.1.0",
+  "description": "Records every agent session automatically through hooks at zero model tokens, and builds a shared long-term knowledge base (index, projects, knowledge, decisions, weekly logs) for Claude Code, Codex, Antigravity, Gemini CLI and any agent that reads AGENTS.md.",
+  "author": {
+    "name": "nchungdev"
+  },
+  "keywords": ["memory", "daily-log", "knowledge-base", "multi-agent", "agents-md", "hooks", "session-history"]
+}

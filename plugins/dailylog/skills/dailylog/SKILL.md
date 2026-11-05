@@ -38,7 +38,7 @@ Logs are the record. The other layers are what makes the record useful later, so
 
 Every extra tool call replays the whole conversation, so a turn spent only on logging usually costs more than the text it writes.
 
-- Do not log routine steps. Where hooks are installed they already record each session's time, first prompt, last reply and commits, using no model tokens.
+- Do not log routine steps. Hooks and `dailylog import` already record each session's time, prompts, files, commands, commits and last reply, using no model tokens. Users can wrap text in `<private>` tags to keep it out.
 - Write only what those records cannot infer: durable facts, decisions with rejected alternatives, open tasks.
 - Send memory commands in parallel with other tool calls, and put several findings in one call.
 - Read through `dailylog context` and `dailylog search`. Do not read old weeks wholesale.
@@ -59,6 +59,8 @@ Search ranks by relevance, ignores case and Vietnamese diacritics, covers this s
 ```bash
 dailylog alias "phình cache" "tràn bộ nhớ"
 ```
+
+Search results for sessions print an id. To read that session, run `dailylog show <id> --grep "<term>"`; it renders from the agent's transcript, so narrow it with `--grep`, `--prompts` or `--day` rather than reading it all.
 
 To widen from one result, run `dailylog related <file>`: it follows links, projects, tags and rare shared words. Superseded decisions are flagged; do not treat them as current.
 
@@ -81,6 +83,8 @@ dailylog todo done switchfin "cast header"
 ```
 
 **To add a line the session record would miss:** `dailylog log "<what, files, commit>" -p <project> -s done`. If context is running low, write this before anything else.
+
+**To import past sessions:** run `dailylog import` (add `--agents claude` to narrow it) and show the user what it found: sessions per agent, dates, new lines and where they go. Ask whether to import, and run it again with `--yes` only after they confirm, even when they asked for the import themselves. If it reports nothing new, say so and stop.
 
 ## What does not belong here
 

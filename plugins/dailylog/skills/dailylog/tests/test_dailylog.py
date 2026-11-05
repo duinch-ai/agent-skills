@@ -82,6 +82,9 @@ class Layers(Base):
         self.init()
         text = 'export TORBOX_API_TOKEN="abc123def456"'
         self.assertNotEqual(self.run_cli("log", text, ok=False).returncode, 0)
+        self.assertNotEqual(self.run_cli("log", "mật khẩu là abc12345", ok=False).returncode, 0)
+        self.assertNotEqual(self.run_cli("log", "token la 11111111-2222-4333-8444-555555555555", ok=False).returncode, 0)
+        self.assertNotEqual(self.run_cli("log", "Token cua ban:\n11111111-2222-4333-8444-555555555555", ok=False).returncode, 0)
         self.run_cli("log", "set TORBOX_API_TOKEN in the keychain")
         self.run_cli("log", "export FOO_TOKEN=$VALUE")
 
@@ -474,18 +477,47 @@ class Import(Base):
     def day(self, week, day):
         return (self.mem / week / f"{day}.md").read_text(encoding="utf-8")
 
+    def test_without_confirmation_it_reports_and_writes_nothing(self):
+        self.seed()
+        out = self.run_cli("import").stdout
+        self.assertIn("claude: 1 sessions, 2 day lines, 2026-10-01 to 2026-10-02", out)
+        self.assertIn("4 new", out)
+        self.assertIn("once they confirm, run this again with --yes", out)
+        self.assertFalse((self.mem / "2026-W40").exists())
+
+    def answer_prompt(self, reply):
+        import pty
+        master, slave = pty.openpty()
+        env = {**{k: v for k, v in os.environ.items() if not k.startswith("DAILYLOG_")}, "HOME": str(self.home), "TZ": "UTC"}
+        process = subprocess.Popen([sys.executable, str(SCRIPT), "import"], cwd=str(self.root), env=env, stdin=slave,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        os.close(slave)
+        os.write(master, reply)
+        out, _ = process.communicate(timeout=30)
+        os.close(master)
+        return out
+
+    def test_terminal_prompt_needs_yes(self):
+        self.seed()
+        self.assertIn("Cancelled, nothing written", self.answer_prompt(b"n\n"))
+        self.assertFalse((self.mem / "2026-W40").exists())
+        self.assertIn("Cancelled, nothing written", self.answer_prompt(b"\n"))
+        self.assertIn("Imported: 4 new", self.answer_prompt(b"y\n"))
+        self.assertTrue((self.mem / "2026-W40" / "2026-10-01.md").exists())
+        self.assertIn("Already up to date", self.run_cli("import").stdout)
+
     def test_dry_run_writes_nothing(self):
         self.seed()
         out = self.run_cli("import", "--dry-run").stdout
-        self.assertIn("dry run", out)
+        self.assertIn("Dry run", out)
         self.assertFalse((self.mem / "2026-W40").exists())
 
     def test_import_each_agent_and_rerun_is_stable(self):
         self.seed()
-        out = self.run_cli("import").stdout
+        out = self.run_cli("import", "--yes").stdout
         self.assertIn("claude: 1 sessions, 2 day lines", out)
-        self.assertIn("codex: 1 sessions, 1 day lines, 1 subagents skipped", out)
-        self.assertIn("agy: 1 sessions, 1 day lines, 1 subagents skipped, 1 undated skipped", out)
+        self.assertIn("codex: 1 sessions, 1 day lines, 2026-10-03 to 2026-10-03, 1 subagents skipped", out)
+        self.assertIn("agy: 1 sessions, 1 day lines, 2026-10-04 to 2026-10-04, 1 subagents skipped, 1 undated skipped", out)
         first = self.day("2026-W40", "2026-10-01")
         self.assertIn("(Claude, claude-opus-5-5) 09:00-09:30, 1 turn,", first)
         self.assertIn('"Fix {tvdb-1} bug" -> Fixed it', first)
@@ -500,7 +532,7 @@ class Import(Base):
         agy = self.day("2026-W40", "2026-10-04")
         self.assertIn('(Antigravity) 07:00-07:30, 42 steps,', agy)
         self.assertIn('"Agy opening prompt" -> Agy final line', agy)
-        again = self.run_cli("import").stdout
+        again = self.run_cli("import", "--yes").stdout
         self.assertIn("0 new, 0 updated, 4 unchanged", again)
         self.assertEqual(first, self.day("2026-W40", "2026-10-01"))
         report = self.run_cli("report", "--day", "2026-10-01").stdout
@@ -513,7 +545,7 @@ class Import(Base):
         marker = "<!-- session:claude-sess- -->"
         (week / "2026-10-01.md").write_text(
             f"# Mine\n\n- handwritten note\n- [session] (Claude) 09:00-09:59, 9 turns, ~/x: \"live\" {marker}\n", encoding="utf-8")
-        self.run_cli("import")
+        self.run_cli("import", "--yes")
         text = self.day("2026-W40", "2026-10-01")
         self.assertIn("- handwritten note", text)
         self.assertIn("9 turns", text)
@@ -532,22 +564,22 @@ class Import(Base):
         week.mkdir()
         old = "- [session] (Codex) 08:00-08:01, 1 turn, ~/x <!-- session:codex-main-1 -->\n"
         (week / "2026-10-03.md").write_text("# Mine\n\n" + old + old, encoding="utf-8")
-        self.run_cli("import")
+        self.run_cli("import", "--yes")
         first = self.day("2026-W40", "2026-10-03")
         self.assertEqual(first.count("session:codex-main-"), 1)
         self.assertIn('1 turn,', first)
         self.assertIn('"Next day ask"', self.day("2026-W40", "2026-10-04"))
-        self.assertIn("0 updated", self.run_cli("import").stdout)
+        self.assertIn("0 updated", self.run_cli("import", "--yes").stdout)
 
     def test_since_meta_and_missing_sources(self):
         self.seed()
-        self.run_cli("import", "--since", "2026-10-03", "--capture", "meta")
+        self.run_cli("import", "--yes", "--since", "2026-10-03", "--capture", "meta")
         self.assertFalse((self.mem / "2026-W40" / "2026-10-01.md").exists())
         self.assertNotIn("Codex ask", self.day("2026-W40", "2026-10-03"))
         empty = self.base / "empty"
         empty.mkdir()
         self.home = empty
-        self.assertIn("0 new", self.run_cli("import").stdout)
+        self.assertIn("0 new", self.run_cli("import", "--yes").stdout)
 
     def test_import_filters_trivial_and_foreign_sessions(self):
         self.seed()
@@ -564,7 +596,7 @@ class Import(Base):
             {"type": "user", "timestamp": "2026-10-05T10:00:00Z", "cwd": cwd_foreign, "message": {"content": "Build foreign app"}},
             {"type": "assistant", "timestamp": "2026-10-05T10:05:00Z", "cwd": cwd_foreign, "message": {"model": "claude", "content": [{"type": "text", "text": "Done foreign"}]}},
         ])
-        out = self.run_cli("import").stdout
+        out = self.run_cli("import", "--yes").stdout
         self.assertIn("trivial skipped", out)
         # Trivial session was ignored
         day_text = self.day("2026-W41", "2026-10-05") if (self.mem / "2026-W41" / "2026-10-05.md").exists() else ""
@@ -578,7 +610,7 @@ class Import(Base):
 
     def test_many_pending_weeks_stay_short_in_context(self):
         self.seed()
-        self.run_cli("import")
+        self.run_cli("import", "--yes")
         for week in ("2026-W41", "2026-W42", "2026-W43"):
             (self.mem / week).mkdir()
         out = self.run_cli("context").stdout
@@ -600,6 +632,119 @@ class Help(Base):
     def test_one_command_and_unknown_topic(self):
         self.assertIn("--dry-run", self.run_cli("help", "import").stdout)
         self.assertNotEqual(self.run_cli("help", "nope", ok=False).returncode, 0)
+
+
+class Details(Base):
+    def seed_claude(self):
+        self.init()
+        cwd = str(self.root)
+        def rec(ts, kind, content, **extra):
+            return {"type": kind, "timestamp": ts, "cwd": cwd, "message": {"content": content, "model": "claude-opus-5-5"}, **extra}
+        long_reply = "Done. " + "x" * 300
+        path = self.home / ".claude/projects/x/abcd1234-sess.jsonl"
+        path.parent.mkdir(parents=True)
+        records = [
+            rec("2026-10-01T09:00:00Z", "user", "First ask"),
+            rec("2026-10-01T09:01:00Z", "assistant", [{"type": "tool_use", "name": "Edit", "input": {"file_path": "/a/b/core.py"}},
+                                                     {"type": "tool_use", "name": "Bash", "input": {"command": "cd /a && git commit -m x"}}]),
+            rec("2026-10-01T09:02:00Z", "user", [{"type": "tool_result", "content": "ok"}], toolUseResult={"stdout": "[main abc1234] x\n 1 file changed"}),
+            rec("2026-10-01T09:03:00Z", "user", "Second ask <private>hunter2 plan</private> tail"),
+            rec("2026-10-01T09:04:00Z", "assistant", [{"type": "text", "text": long_reply}]),
+        ]
+        path.write_text("".join(json.dumps(r) + "\n" for r in records), encoding="utf-8")
+        return long_reply
+
+    def test_day_file_has_prompts_files_commands_commits_result(self):
+        self.seed_claude()
+        self.run_cli("import", "--yes")
+        text = (self.mem / "2026-W40" / "2026-10-01.md").read_text(encoding="utf-8")
+        self.assertIn('"First ask" (commits: abc1234) <!-- session:abcd1234-ses -->', text)
+        self.assertIn("  - 09:03 Second ask [private] tail", text)
+        self.assertNotIn("hunter2", text)
+        self.assertIn("  - Changed 1 file: core.py", text)
+        self.assertIn("  - Ran 1 command: git commit x1", text)
+        self.assertIn("  - Result: Done.", text)
+        self.assertIn("0 updated", self.run_cli("import", "--yes").stdout)
+
+    def test_report_search_and_handwritten_lines_understand_blocks(self):
+        self.seed_claude()
+        week = self.mem / "2026-W40"
+        week.mkdir()
+        (week / "2026-10-01.md").write_text("# Mine\n\n- my note\n", encoding="utf-8")
+        self.run_cli("import", "--yes")
+        report = self.run_cli("report", "--day", "2026-10-01").stdout
+        self.assertIn("1 older lines", report)
+        self.assertIn("- my note", (week / "2026-10-01.md").read_text(encoding="utf-8"))
+        found = self.run_cli("search", "Second", "ask").stdout
+        self.assertIn("Second ask", found)
+        self.assertIn("[show abcd1234-ses]", found)
+
+    def test_hook_keeps_details_and_adds_prompts(self):
+        self.seed_claude()
+        self.run_cli("import", "--yes")
+        day = self.mem / "2026-W40" / "2026-10-01.md"
+        when = "2026-10-01T10:00:00"
+        payload = {"session_id": "abcd1234-sess", "cwd": str(self.root), "prompt": "Live ask"}
+        self.run_cli("hook", "--agent", "claude", "--event", "UserPromptSubmit", stdin=json.dumps(payload), when=when)
+        text = day.read_text(encoding="utf-8")
+        self.assertIn("  - Changed 1 file: core.py", text)
+        self.assertEqual(text.count("session:abcd1234-ses"), 1)
+        payload["prompt"] = "Later ask"
+        self.run_cli("hook", "--agent", "claude", "--event", "UserPromptSubmit", stdin=json.dumps(payload), when=when)
+        self.assertIn("  - 10:00 Later ask", day.read_text(encoding="utf-8"))
+
+    def test_many_prompts_are_trimmed_with_a_pointer(self):
+        self.init()
+        path = self.home / ".claude/projects/x/many5678-sess.jsonl"
+        path.parent.mkdir(parents=True)
+        rows = [{"type": "user", "timestamp": f"2026-10-01T09:{i:02d}:00Z", "cwd": str(self.root), "message": {"content": f"ask number {i}"}} for i in range(30)]
+        path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        self.run_cli("import", "--yes")
+        text = (self.mem / "2026-W40" / "2026-10-01.md").read_text(encoding="utf-8")
+        self.assertIn("more prompts; `dailylog show many5678-ses`", text)
+        self.assertIn("ask number 29", text)
+        self.assertNotIn("ask number 15", text)
+
+    def test_show_reads_the_transcript(self):
+        long_reply = self.seed_claude()
+        out = self.run_cli("show", "abcd1234").stdout
+        self.assertIn("you: First ask", out)
+        self.assertIn("tool: Edit: /a/b/core.py", out)
+        self.assertIn(long_reply, out)
+        self.assertNotIn("hunter2", self.run_cli("show", "abcd1234", "--grep", "Second").stdout)
+        prompts = self.run_cli("show", "abcd1234", "--prompts").stdout
+        self.assertNotIn("agent:", prompts)
+        self.assertIn("more entries", self.run_cli("show", "abcd1234", "--max-chars", "50").stdout)
+        self.assertNotEqual(self.run_cli("show", "zzzz9999", ok=False).returncode, 0)
+
+    def test_antigravity_transcript_gives_real_times_and_work(self):
+        self.init()
+        root = self.home / ".gemini/antigravity"
+        logs = root / "brain/agy-real-1/.system_generated/logs"
+        logs.mkdir(parents=True)
+        steps = [
+            {"type": "USER_INPUT", "source": "USER_EXPLICIT", "created_at": "2026-10-04T07:00:00Z", "content": "<USER_REQUEST>\nWrite tests\n</USER_REQUEST>\n<ADDITIONAL>x</ADDITIONAL>"},
+            {"type": "PLANNER_RESPONSE", "source": "MODEL", "created_at": "2026-10-04T07:05:00Z", "tool_calls": [
+                {"name": "run_command", "args": {"CommandLine": '"./gradlew test"'}},
+                {"name": "write_to_file", "args": {"TargetFile": '"/a/Foo.kt"'}},
+                {"name": "edit_file", "args": {"Path": '"/a/Bar.kt"'}}]},
+            {"type": "GENERIC", "source": "MODEL", "created_at": "2026-10-04T07:06:00Z", "content": "[dev 1234abc] msg"},
+            {"type": "PLANNER_RESPONSE", "source": "MODEL", "created_at": "2026-10-04T09:00:00Z", "content": "All green"},
+        ]
+        (logs / "transcript.jsonl").write_text("".join(json.dumps(r) + "\n" for r in steps), encoding="utf-8")
+        con = sqlite3.connect(root / "conversation_summaries.db")
+        con.execute("create table conversation_summaries (conversation_id,title,preview,step_count,last_modified_time,last_user_input_time,workspace_uris,nesting_depth,parent_conversation_id,raw_summary)")
+        con.execute("insert into conversation_summaries values (?,?,?,?,?,?,?,?,?,?)",
+                    ("agy-real-1", "Tests", "", 4, "2026-10-04 09:00:00+00:00", "2026-10-04 08:59:00+00:00", json.dumps(["file://" + str(self.root)]), 0, "", b""))
+        con.commit()
+        con.close()
+        self.run_cli("import", "--yes", "--agents", "agy")
+        text = (self.mem / "2026-W40" / "2026-10-04.md").read_text(encoding="utf-8")
+        self.assertIn("(Antigravity) 07:00-09:00, 4 steps,", text)
+        self.assertIn('"Tests" -> All green (commits: 1234abc)', text)
+        self.assertIn("  - Changed 2 files: Bar.kt, Foo.kt", text)
+        self.assertIn("  - Ran 1 command: gradlew x1", text)
+        self.assertIn("you: Write tests", self.run_cli("show", "agy-real").stdout)
 
 
 class Wire(Base):

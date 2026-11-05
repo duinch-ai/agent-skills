@@ -55,6 +55,8 @@ SECRET_PATTERNS = {
     "Slack token": r"\bxox[abprs]-[A-Za-z0-9-]{10,}",
     "private key": r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
     "environment secret": r"\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY)[A-Z0-9_]*\s*=\s*['\"]?[^\s'\"`<>{}$]{6,}",
+    "token near a long value": r"(?i)\b(?:token|api.?key|secret|bearer|cookie|credential)s?\b[\s\S]{0,60}?\b(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[A-Za-z0-9_-]{32,})\b",
+    "Vietnamese password": r"(?i)mật khẩu\s*(?:là|:|=)\s*\S{4,}",
     "credential assignment":
         r"(?i)\b(?:password|passwd|pwd|secret|api[_-]?key|access[_-]?token)\b\s*[:=]\s*['\"]?[^\s'\"`<>{}]{6,}",
 }
@@ -635,7 +637,7 @@ def lint_findings(mem, stale_days=STALE_DAYS):
             label = find_secret(line)
             if label:
                 errors.append(f"{rel}:{number} looks like a {label}")
-        for link in re.findall(r"\[\[([^\]|#]+)", text):
+        for link in [] if DAY_RE.match(path.name) else re.findall(r"\[\[([^\]|#]+)", text):
             if link.strip() not in stems:
                 warnings.append(f"{rel}: broken link [[{link.strip()}]]")
     for path, meta in docs(mem, "knowledge"):
@@ -799,7 +801,7 @@ def linear_search(args, mem, stores):
 
 # --- ranked search index (SQLite FTS5; rebuilt from Markdown, never the source) --
 
-INDEX_VERSION = 2
+INDEX_VERSION = 3
 COMMON_WORDS = frozenset("""
 bang bien buoc cac cach cam can cho chua chung chuyen cua cung dang day den deu dieu doc dong duoc gan giua hay hien hoac
 hoat hon khac khi khong lai lam lan len lieu luon mat minh mot muc nay neu nhan nhieu nhu nhung noi phai phan qua quan rat
@@ -840,7 +842,7 @@ def index_words(text):
 
 def chunk_markdown(body, first_line):
     """Sections split at headings; each session line and long list stays findable alone."""
-    chunks, heading, buffer, start = [], "", [], first_line
+    chunks, heading, buffer, start, in_session = [], "", [], first_line, False
 
     def flush():
         nonlocal buffer
@@ -853,18 +855,27 @@ def chunk_markdown(body, first_line):
         found = re.match(r"^(#{1,6})\s+(.*)", line)
         if found:
             flush()
+            in_session = False
             heading = found.group(2).strip() if len(found.group(1)) > 1 else ""  # h1 is just the file's title
             start = number + 1
             continue
-        session = line.startswith("- [session]")
-        if session or (sum(map(len, buffer)) > CHUNK_CHARS and re.match(r"^\s*$|^- ", line)):
+        if line.startswith("- [session]"):
+            flush()
+            start, in_session = number, True
+            buffer.append(line)
+            continue
+        if in_session:
+            if line.startswith("  "):
+                buffer.append(line)
+                continue
+            flush()
+            in_session = False
+        if sum(map(len, buffer)) > CHUNK_CHARS and re.match(r"^\s*$|^- ", line):
             flush()
             start = number
         if not buffer:
             start = number
         buffer.append(re.sub(r"\s*<!-- .*? -->", "", line))
-        if session:
-            flush()
     flush()
     return chunks
 
@@ -913,7 +924,7 @@ def index_file(con, mem, path, rel, stat):
     for line, heading, chunk in chunks:
         cursor = con.execute("insert into chunks(path,heading,line,text) values (?,?,?,?)", (rel, heading, line, chunk))
         con.execute("insert into fts(rowid,title,aliases,heading,body) values (?,?,?,?,?)",
-                    (cursor.lastrowid, head, extra, index_words(heading), index_words(chunk)))
+                    (cursor.lastrowid, head, extra, index_words(heading), index_words(re.sub(r"<!-- .*? -->", "", chunk))))
 
 
 def drop_file(con, rel):
@@ -1087,8 +1098,10 @@ def cmd_search(args):
         shown = 0
         for _, hit, variant in hits:
             heading = f"[{hit[1]}] " if hit[1] and hit[1] != hit[4] else ""
+            marker = re.search(r"<!-- session:([^ ]+) -->", hit[3])
+            tag = f"  [show {marker.group(1)}]" if marker else ""
             for _, number, line in best_lines(hit[3], variant, hit[2], 1):
-                print(f"  {number}: {heading}{clip(display_line(line), 200)}")
+                print(f"  {number}: {heading}{clip(display_line(re.sub(r'\s*<!-- .*? -->', '', line)), 200).strip()}{tag}")
                 shown += 1
             if shown >= args.lines:
                 break
@@ -1181,6 +1194,120 @@ def cmd_alias(args):
     return 0
 
 
+# --- tier 2: one session in full, rendered from the agent's own transcript ------
+
+
+def session_sources(needle):
+    home = Path.home()
+    found = []
+    for path in home.glob(f".claude/projects/*/{needle}*.jsonl"):
+        found.append(("Claude", path))
+    for folder in ("sessions", "archived_sessions"):
+        for path in (home / ".codex" / folder).rglob(f"*{needle}*"):
+            if path.is_file() and path.name.endswith((".jsonl", ".jsonl.zst")):
+                found.append(("Codex", path))
+    for name in ("antigravity", "antigravity-cli"):
+        for folder in (home / ".gemini" / name / "brain").glob(f"{needle}*"):
+            transcript = folder / ".system_generated" / "logs" / "transcript.jsonl"
+            if transcript.exists():
+                found.append(("Antigravity", transcript))
+    return sorted(found, key=lambda item: str(item[1]))
+
+
+def session_events(agent, path):
+    """(time, role, text) from any agent. role: you, agent, tool."""
+    if agent == "Claude":
+        for record in read_jsonl(path):
+            moment = parse_time(record.get("timestamp"))
+            message = record.get("message") or {}
+            if record.get("isSidechain") or not moment:
+                continue
+            if record.get("type") == "user" and not record.get("isMeta") and not record.get("toolUseResult"):
+                text = block_text(message.get("content"))
+                if text and not NOT_TYPED_RE.match(text):
+                    yield moment, "you", text
+            elif record.get("type") == "assistant":
+                for block in message.get("content") or []:
+                    if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
+                        yield moment, "agent", block["text"]
+                    elif isinstance(block, dict) and block.get("type") == "tool_use":
+                        inputs = block.get("input") or {}
+                        yield moment, "tool", f"{block.get('name')}: {inputs.get('command') or inputs.get('file_path') or ''}"
+    elif agent == "Codex":
+        for record in read_jsonl(path):
+            payload = record.get("payload") or {}
+            moment = parse_time(record.get("timestamp"))
+            if record.get("type") == "session_meta" and isinstance(payload.get("source"), dict) and "subagent" in payload["source"]:
+                return
+            item = payload.get("item") or {}
+            if record.get("type") != "event_msg" or payload.get("type") != "item_completed" or not moment:
+                continue
+            if item.get("type") == "UserMessage":
+                text = block_text(item.get("content"))
+                if text and not NOT_TYPED_RE.match(text):
+                    yield moment, "you", text
+            elif item.get("type") == "AgentMessage":
+                yield moment, "agent", block_text(item.get("content"))
+            elif item.get("type") == "CommandExecution":
+                command = item.get("command")
+                yield moment, "tool", f"Run: {command[-1] if isinstance(command, list) and command else command}"
+            elif item.get("type") == "FileChange":
+                yield moment, "tool", "Change: " + ", ".join(item.get("changes") or {})
+    else:
+        for record in read_jsonl(path):
+            moment = parse_time(record.get("created_at"))
+            content = record.get("content") or ""
+            if not moment:
+                continue
+            if record.get("type") == "USER_INPUT" and record.get("source") == "USER_EXPLICIT":
+                inside = re.search(r"<USER_REQUEST>\s*(.*?)\s*(</USER_REQUEST>|$)", content, re.S)
+                yield moment, "you", inside.group(1) if inside else content
+            elif record.get("type") == "PLANNER_RESPONSE":
+                if content:
+                    yield moment, "agent", content
+                for call in record.get("tool_calls") or []:
+                    args = call.get("args") or {}
+                    target = plain_arg(args.get("CommandLine") or args.get("TargetFile") or args.get("Path") or args.get("AbsolutePath"))
+                    yield moment, "tool", f"{call.get('name')}: {target}"
+
+
+def cmd_show(args):
+    needle = session_id(args.session)
+    if len(needle) < 4:
+        fail("give at least 4 characters of the session id, as printed by `dailylog search`")
+    sources = session_sources(needle)
+    if not sources:
+        fail(f"no transcript for {needle!r}. The agent may have deleted it; the day log keeps what was captured.")
+    limit = 10 ** 9 if args.full else 1500
+    wanted = fold(args.grep) if args.grep else ""
+    budget, shown, skipped, seen = args.max_chars, 0, 0, set()
+    print(f"# Session {needle} ({sources[0][0]})")
+    for _, path in sources:
+        print(f"Source: {str(path).replace(str(Path.home()), '~')}")
+    for agent, path in sources:
+        for moment, role, text in session_events(agent, path):
+            key = (moment, role, text)
+            if key in seen or (args.prompts and role != "you") or (args.day and moment.date().isoformat() != args.day):
+                continue
+            seen.add(key)
+            if wanted and wanted not in fold(text):
+                continue
+            body = redact(text).strip()
+            body = body if len(body) <= (200 if role == "tool" else limit) else body[: 200 if role == "tool" else limit] + " [...]"
+            entry = f"\n[{moment.strftime('%Y-%m-%d %H:%M')}] {role}: {body}"
+            if len(entry) > budget:
+                skipped += 1
+                continue
+            budget -= len(entry)
+            shown += 1
+            print(entry)
+    if skipped:
+        print(f"\n... {skipped} more entries not shown. Narrow with --grep, --prompts or --day, or raise --max-chars.")
+    if not shown:
+        print("\nNothing matched.")
+    return 0
+
+
 # --- report -----------------------------------------------------------------
 
 ENTRY_RE = re.compile(r"^- (?:\[session\] |\[.\] \[[A-Z_]+\] )?\(([^)]+)\) (\d\d:\d\d)(?:-(\d\d:\d\d))?[,\s]*(.*)$")
@@ -1199,14 +1326,18 @@ def cmd_report(args):
     if not path.exists():
         print(f"no log for {day.isoformat()}")
         return 0
-    entries, unstamped, totals = [], 0, {}
+    entries, unstamped, totals, in_session = [], 0, {}, False
     for raw in read_text(path).splitlines():
         line = re.sub(r"\s*<!-- session:[^>]* -->$", "", raw)
         found = ENTRY_RE.match(line)
         if not found:
+            if raw.startswith("  ") and in_session:
+                continue
+            in_session = False
             if raw.startswith(("- ", "  - ", "    - ")):
                 unstamped += 1
             continue
+        in_session = raw.startswith("- [session]")
         who, start, end, rest = found.groups()
         if args.agent and fold(args.agent) not in fold(who):
             continue
@@ -1307,13 +1438,26 @@ HOOK_EVENTS = {
 AGENT_LABELS = {"claude": "Claude", "codex": "Codex", "agy": "Antigravity"}
 SESSION_KEEP_DAYS = 14
 SESSION_TEXT_CHARS = 140
+PROMPT_CHARS = 200
+RESULT_CHARS = 500
+PROMPTS_SHOWN = 12
+FILES_SHOWN = 8
 
 
-def scrub(text):
-    text = one_line(re.sub(r"[*`#]+", "", text))
+def strip_private(text):
+    """Anything between <private> tags never reaches the memory."""
+    return re.sub(r"<private>.*?(</private>|$)", "[private]", text or "", flags=re.S | re.I)
+
+
+def redact(text):
+    text = strip_private(text)
     for pattern in SECRET_PATTERNS.values():
         text = re.sub(pattern, "[redacted]", text)
     return text
+
+
+def scrub(text):
+    return one_line(redact(re.sub(r"[*`#]+", "", text)))
 
 
 def first_value(payload, *keys):
@@ -1379,29 +1523,86 @@ def session_line(state):
     line = f"- [session] ({who}) {started}-{ended}, {turns}, {place}"
     if state.get("title"):
         line += f': "{state["title"]}"'
-    if state.get("outcome"):
+    if state.get("outcome") and not state.get("result"):
         line += f" -> {state['outcome']}"
     if state.get("commits"):
         line += f" (commits: {' '.join(state['commits'])})"
     return line + f" <!-- session:{state['id']} -->"
 
 
+def session_details(state):
+    """The lines under a session: what was asked and done. The full text stays in the transcript."""
+    out = []
+    prompts = state.get("prompts") or []
+    prompts = prompts[1:] if prompts and state.get("title") and prompts[0][1] == state["title"][: len(prompts[0][1])] else prompts
+    shown = prompts
+    if len(prompts) > PROMPTS_SHOWN:
+        half = PROMPTS_SHOWN // 2
+        shown = prompts[:half] + [None] + prompts[-half:]
+    for item in shown:
+        if item is None:
+            out.append(f"  - ... {len(prompts) - PROMPTS_SHOWN} more prompts; `dailylog show {state['id']}`")
+        else:
+            out.append(f"  - {item[0]} {item[1]}")
+    files = state.get("files") or []
+    if files:
+        names = ", ".join(files[:FILES_SHOWN]) + (", ..." if len(files) > FILES_SHOWN else "")
+        out.append(f"  - Changed {len(files)} file{'s' if len(files) != 1 else ''}: {names}")
+    if state.get("commands"):
+        top = ", ".join(state.get("top_commands") or [])
+        out.append(f"  - Ran {state['commands']} command{'s' if state['commands'] != 1 else ''}" + (f": {top}" if top else ""))
+    if state.get("result"):
+        out.append(f"  - Result: {state['result']}")
+    return out
+
+
+def session_block(state):
+    return [session_line(state)] + session_details(state)
+
+
+def parse_log(lines):
+    """Split a day file into plain lines and session blocks, keyed by session id."""
+    items, positions, removed, skipping = [], {}, 0, False
+    for line in lines:
+        found = re.search(r"<!-- session:([^ ]+) -->$", line)
+        if found:
+            skipping = found.group(1) in positions
+            if skipping:  # keep the first copy of a repeated session
+                removed += 1
+                continue
+            positions[found.group(1)] = len(items)
+            items.append([line])
+        elif (skipping or (items and isinstance(items[-1], list))) and line.startswith("  "):
+            if not skipping:
+                items[-1].append(line)
+        else:
+            skipping = False
+            items.append(line)
+    return items, positions, removed
+
+
+def flatten_log(items):
+    out = []
+    for item in items:
+        out.extend(item) if isinstance(item, list) else out.append(item)
+    return "\n".join(out) + "\n"
+
+
 def upsert_session_line(mem, state):
     path = mem / state["week"] / f"{state['day']}.md"
-    marker = f"<!-- session:{state['id']} -->"
-    line = session_line(state)
+    block = session_block(state)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write(path, f"# Work log - {state['day']} ({state['week']})\n\n{line}\n")
+        atomic_write(path, f"# Work log - {state['day']} ({state['week']})\n\n" + "\n".join(block) + "\n")
         return
-    lines = read_text(path).splitlines()
-    for i, existing in enumerate(lines):
-        if existing.endswith(marker):
-            lines[i] = line
-            break
-    else:
-        lines.append(line)
-    atomic_write(path, "\n".join(lines) + "\n")
+    items, positions, _ = parse_log(read_text(path).splitlines())
+    at = positions.get(state["id"])
+    if at is None:
+        items.append(block)
+    else:  # what only `import` can see survives the hook's update
+        kept = [l for l in items[at][1:] if l.startswith(("  - Changed ", "  - Ran "))]
+        items[at] = block + [l for l in kept if l not in block]
+    atomic_write(path, flatten_log(items))
 
 
 def clean_sessions(folder):
@@ -1443,9 +1644,15 @@ def run_hook(args, payload):
         if args.capture == "full":
             if prompt and not state.get("title"):
                 state["title"] = clip(scrub(prompt), SESSION_TEXT_CHARS)
+            if prompt:
+                cleaned = clip(scrub(prompt), PROMPT_CHARS)
+                known = state.setdefault("prompts", [])
+                if not known or known[-1][1] != cleaned:
+                    known.append([moment.strftime("%H:%M"), cleaned])
             reply = first_value(payload, "last_assistant_message", "lastAssistantMessage")
             if reply:
                 state["outcome"] = clip(scrub(reply), SESSION_TEXT_CHARS)
+                state["result"] = clip(scrub(reply), RESULT_CHARS) if len(scrub(reply)) > SESSION_TEXT_CHARS else ""
         if args.event in ("Stop", "SessionEnd"):
             state["ended"] = moment.isoformat(timespec="seconds")
             state["commits"] = commits_since(cwd, state["started"])
@@ -1592,15 +1799,31 @@ def session_id(raw):
     return re.sub(r"[^A-Za-z0-9_-]", "", str(raw))[:12]
 
 
+COMMIT_RE = re.compile(r"\[[\w/.+-]+(?: \(root-commit\))? ([0-9a-f]{7,40})\]")
+
+
+def command_name(command):
+    """`cd x && git status --short` counts as `git status`."""
+    part = re.split(r"&&|;|\|", str(command).strip())
+    words = next((p.split() for p in part if p.strip() and not p.strip().startswith(("cd ", "export "))), [])
+    if not words:
+        return ""
+    name = Path(words[0].strip("'\"")).name
+    if name == "git" and len(words) > 1:
+        return f"git {words[1]}"
+    return name
+
+
 class DayTally:
-    """Collects one session's activity, one line per local day."""
+    """Collects one session's activity, one entry per local day."""
 
     def __init__(self, agent, raw_id):
         self.agent, self.id, self.days, self.cwd, self.model = agent, session_id(raw_id), {}, "", ""
         self.seen = set()
 
     def day(self, moment):
-        return self.days.setdefault(moment.date(), {"start": moment, "end": moment, "turns": 0, "title": "", "outcome": ""})
+        return self.days.setdefault(moment.date(), {"start": moment, "end": moment, "turns": 0, "title": "", "outcome": "",
+                                                    "prompts": [], "files": {}, "commands": {}, "commits": [], "steps": 0})
 
     def touch(self, moment):
         if moment:
@@ -1608,11 +1831,13 @@ class DayTally:
             entry["start"], entry["end"] = min(entry["start"], moment), max(entry["end"], moment)
 
     def prompt(self, moment, text):
+        text = strip_private(text or "")
         if moment and text and not NOT_TYPED_RE.match(text) and (moment, text) not in self.seen:
             self.seen.add((moment, text))
             entry = self.day(moment)
             entry["turns"] += 1
             entry["title"] = entry["title"] or text
+            entry["prompts"].append((moment, text))
 
     def reply(self, moment, text):
         if moment and text:
@@ -1620,15 +1845,46 @@ class DayTally:
             if moment >= entry.get("replied", moment):
                 entry["replied"], entry["outcome"] = moment, text
 
+    def file(self, moment, path):
+        if moment and path:
+            self.day(moment)["files"][str(path)] = True
+
+    def command(self, moment, text):
+        name = command_name(text)
+        if moment and name:
+            counts = self.day(moment)["commands"]
+            counts[name] = counts.get(name, 0) + 1
+
+    def output(self, moment, text):
+        if moment and text:
+            commits = self.day(moment)["commits"]
+            for found in COMMIT_RE.findall(str(text)[-4000:]):
+                if found[:7] not in commits:
+                    commits.append(found[:7])
+
+    def step(self, moment):
+        if moment:
+            self.day(moment)["steps"] += 1
+
     def states(self, capture):
+        full = capture == "full"
         for day, entry in self.days.items():
-            if not entry["turns"]:
+            if not (entry["turns"] or entry["files"] or entry["commands"]):
                 continue
+            result = scrub(entry["outcome"]) if full else ""
+            top = sorted(entry["commands"].items(), key=lambda item: (-item[1], item[0]))[:3]
+            prompts = sorted(entry["prompts"], key=lambda item: item[0]) if full else []
+            files = sorted({Path(p).name for p in entry["files"]})
             yield {"id": self.id, "label": self.agent, "model": self.model, "cwd": self.cwd or str(Path.home()),
                    "turns": entry["turns"], "started": entry["start"].isoformat(timespec="seconds"),
                    "ended": entry["end"].isoformat(timespec="seconds"), "day": day.isoformat(), "week": week_id(day),
-                   "title": clip(scrub(entry["title"]), SESSION_TEXT_CHARS) if capture == "full" else "",
-                   "outcome": clip(scrub(entry["outcome"]), SESSION_TEXT_CHARS) if capture == "full" else ""}
+                   "title": clip(scrub(entry["title"]), SESSION_TEXT_CHARS) if full else "",
+                   "outcome": clip(result, SESSION_TEXT_CHARS),
+                   "result": clip(result, RESULT_CHARS) if len(result) > SESSION_TEXT_CHARS else "",
+                   "prompts": [[m.strftime("%H:%M"), clip(scrub(t), PROMPT_CHARS)] for m, t in prompts],
+                   "files": files, "commands": sum(entry["commands"].values()),
+                   "top_commands": [f"{name} x{count}" for name, count in top],
+                   "commits": entry["commits"][:10], "steps": entry["steps"]}
 
 
 def read_jsonl(path):
@@ -1665,12 +1921,23 @@ def scan_claude(stats):
                 if kind == "user" and not record.get("isMeta"):
                     tally.cwd = tally.cwd or record.get("cwd", "")
                     tally.touch(moment)
-                    if not record.get("toolUseResult"):
+                    result = record.get("toolUseResult")
+                    if result:
+                        tally.output(moment, result.get("stdout") if isinstance(result, dict) else result)
+                    else:
                         tally.prompt(moment, block_text(message.get("content")))
                 elif kind == "assistant":
                     tally.touch(moment)
                     tally.model = message.get("model") if str(message.get("model", "")).startswith("claude") else tally.model
-                    tally.reply(moment, block_text([b for b in message.get("content") or [] if isinstance(b, dict) and b.get("type") == "text"]))
+                    blocks = [b for b in message.get("content") or [] if isinstance(b, dict)]
+                    tally.reply(moment, block_text([b for b in blocks if b.get("type") == "text"]))
+                    for block in blocks:
+                        if block.get("type") == "tool_use":
+                            inputs = block.get("input") or {}
+                            if block.get("name") in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                                tally.file(moment, inputs.get("file_path") or inputs.get("notebook_path"))
+                            elif block.get("name") == "Bash":
+                                tally.command(moment, inputs.get("command"))
             yield tally
         except OSError:
             stats["errors"] += 1
@@ -1712,6 +1979,13 @@ def scan_codex(stats):
                         tally.prompt(moment, payload.get("message", ""))
                     elif payload.get("type") == "task_complete":
                         tally.reply(moment, payload.get("last_agent_message") or "")
+                    elif item.get("type") == "CommandExecution":
+                        command = item.get("command")
+                        tally.command(moment, command[-1] if isinstance(command, list) and command else command)
+                        tally.output(moment, item.get("aggregated_output"))
+                    elif item.get("type") == "FileChange":
+                        for changed in item.get("changes") or {}:
+                            tally.file(moment, changed)
                 elif kind == "response_item" and payload.get("type") == "message":
                     text = block_text(payload.get("content"))
                     tally.touch(moment)
@@ -1739,6 +2013,40 @@ def first_proto_string(blob):
             break
         shift += 7
     return bytes(blob[at:at + size]).decode("utf-8", "replace")
+
+
+def plain_arg(value):
+    return str(value).strip().strip('"') if value is not None else ""
+
+
+def read_agy_transcript(tally, path):
+    """Steps of an Antigravity conversation: real prompts, times, files and commands."""
+    for record in read_jsonl(path):
+        moment = parse_time(record.get("created_at"))
+        kind = record.get("type")
+        if not moment:
+            continue
+        tally.touch(moment)
+        tally.step(moment)
+        content = record.get("content") or ""
+        if kind == "USER_INPUT" and record.get("source") == "USER_EXPLICIT":
+            inside = re.search(r"<USER_REQUEST>\s*(.*?)\s*(</USER_REQUEST>|$)", content, re.S)
+            tally.prompt(moment, inside.group(1) if inside else content)
+        elif kind == "PLANNER_RESPONSE":
+            tally.reply(moment, content if isinstance(content, str) else "")
+            for call in record.get("tool_calls") or []:
+                args = call.get("args") or {}
+                name = call.get("name", "")
+                if name == "run_command":
+                    tally.command(moment, plain_arg(args.get("CommandLine")))
+                elif re.search(r"write_to_file|write_file|replace_file|multi_replace|edit_file", name):
+                    tally.file(moment, plain_arg(args.get("TargetFile") or args.get("Path") or args.get("AbsolutePath")))
+        elif kind == "GENERIC":
+            tally.output(moment, content)
+
+
+def agy_transcript(root, cid):
+    return root / "brain" / cid / ".system_generated" / "logs" / "transcript.jsonl"
 
 
 def scan_antigravity(stats):
@@ -1781,13 +2089,27 @@ def scan_antigravity(stats):
             if not known or steps > known["steps"]:
                 lines = [l for l in (tails.get(cid) or "").splitlines() if len(re.findall(r"\w", l)) >= 8]
                 found[cid] = {"steps": steps, "start": started, "end": ended, "cwd": cwd, "outcome": lines[-1] if lines else "",
-                              "title": title or first_proto_string(raw) or preview or ""}
+                              "title": title or first_proto_string(raw) or preview or "",
+                              "transcript": agy_transcript(path.parent, cid)}
     for cid, row in found.items():
         tally = DayTally("Antigravity", cid)
         tally.cwd = row["cwd"]
+        if row["transcript"].exists():
+            try:
+                read_agy_transcript(tally, row["transcript"])
+            except OSError:
+                stats["errors"] += 1
+            if row["title"] and tally.days:  # the app's own title reads better than a long first prompt
+                first = min(tally.days)
+                tally.days[first]["title"] = row["title"]
+            if any(entry["turns"] for entry in tally.days.values()):
+                yield tally
+                continue
+            tally = DayTally("Antigravity", cid)
+            tally.cwd = row["cwd"]
         tally.steps = row["steps"]
-        tally.days[row["start"].date()] = {"start": row["start"], "end": row["end"], "turns": 1,
-                                           "title": row["title"], "outcome": row["outcome"]}
+        entry = tally.day(row["start"])
+        entry.update(end=row["end"], turns=1, title=row["title"], outcome=row["outcome"])
         yield tally
 
 
@@ -1796,19 +2118,9 @@ IMPORT_TURNS_RE = re.compile(r", (\d+) turns?,")
 
 
 def merge_session_lines(path, day, week, states, dry_run):
-    """Add or refresh this day's session lines; everything else stays byte for byte."""
+    """Add or refresh this day's session blocks; everything else stays byte for byte."""
     lines = read_text(path).splitlines() if path.exists() else [f"# Work log - {day} ({week})", ""]
-    positions, unique = {}, []
-    removed = 0
-    for line in lines:
-        found = re.search(r"<!-- session:([^ ]+) -->$", line)
-        if found and found.group(1) in positions:  # keep the first copy of a repeated session
-            removed += 1
-            continue
-        if found:
-            positions[found.group(1)] = len(unique)
-        unique.append(line)
-    lines = unique
+    items, positions, removed = parse_log(lines)
     added = updated = same = 0
     seen_prompts = set()
     for state in sorted(states, key=lambda item: item["started"]):
@@ -1817,24 +2129,24 @@ def merge_session_lines(path, day, week, states, dry_run):
             continue
         if norm_key[0]:
             seen_prompts.add(norm_key)
-        line = session_line(state)
+        block = session_block(state)
         at = positions.get(state["id"])
         if at is None:
-            positions[state["id"]] = len(lines)
-            lines.append(line)
+            positions[state["id"]] = len(items)
+            items.append(block)
             added += 1
-        elif lines[at] == line:
+        elif items[at] == block:
             same += 1
         else:
-            kept = IMPORT_TURNS_RE.search(lines[at])
+            kept = IMPORT_TURNS_RE.search(items[at][0])
             if kept and not state.get("steps") and int(kept.group(1)) > state["turns"]:
                 same += 1
             else:
-                lines[at] = line
+                items[at] = block
                 updated += 1
     if (added or updated or removed) and not dry_run:
         path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write(path, "\n".join(lines) + "\n")
+        atomic_write(path, flatten_log(items))
     return added, updated, same
 
 
@@ -1846,13 +2158,11 @@ def cmd_import(args):
     since = args.since or ""
     grouped, tally_stats, redacted = {}, {}, 0
     for agent in agents:
-        stats = {"sessions": 0, "lines": 0, "subagents": 0, "undated": 0, "trivial": 0, "errors": 0}
+        stats = {"sessions": 0, "lines": 0, "subagents": 0, "undated": 0, "trivial": 0, "errors": 0, "days": set()}
         tally_stats[agent] = stats
         for tally in SCANNERS[agent](stats):
-            produced = list(tally.states(args.capture))
-            if produced:
-                stats["sessions"] += 1
-            for state in produced:
+            kept = False
+            for state in tally.states(args.capture):
                 if state["day"] < since:
                     continue
                 if state["title"]:
@@ -1865,25 +2175,58 @@ def cmd_import(args):
                         continue
                 if getattr(tally, "steps", 0):
                     state["steps"] = tally.steps
+                state["steps"] = state.get("steps") if tally.agent == "Antigravity" else 0
                 stats["lines"] += 1
-                redacted += "[redacted]" in state["title"] + state["outcome"]
+                stats["days"].add(state["day"])
+                kept = True
+                redacted += "\n".join(session_block(state)).count("[redacted]")
                 grouped.setdefault(hook_memory(state["cwd"], args.root), {}).setdefault((state["week"], state["day"]), []).append(state)
+            stats["sessions"] += kept
+    print("Found:")
     for agent, stats in tally_stats.items():
         extras = "".join(f", {stats[k]} {k} skipped" for k in ("subagents", "undated", "trivial", "errors") if stats[k])
-        print(f"{agent}: {stats['sessions']} sessions, {stats['lines']} day lines{extras}")
+        span = f", {min(stats['days'])} to {max(stats['days'])}" if stats["days"] else ""
+        print(f"  {agent}: {stats['sessions']} sessions, {stats['lines']} day lines{span}{extras}")
+    print("Would write:" if grouped else "Would write: nothing")
+    totals = write_import(grouped, dry_run=True, report=True)
+    summary = f"{totals[0]} new, {totals[1]} updated, {totals[2]} unchanged; {redacted} secret-like strings redacted."
+    if args.dry_run:
+        print("Dry run, nothing written. " + summary)
+        return 0
+    if not totals[0] and not totals[1]:
+        print("Already up to date, nothing to import. " + summary)
+        return 0
+    print(summary)
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print("Nothing written yet. Show these numbers to the user; once they confirm, run this again with --yes.")
+            return 0
+        try:
+            answer = input("Import these sessions? [y/N] ")
+        except EOFError:
+            answer = ""
+        if answer.strip().lower() not in ("y", "yes"):
+            print("Cancelled, nothing written.")
+            return 0
+    totals = write_import(grouped, dry_run=False, report=False)
+    print(f"Imported: {totals[0]} new, {totals[1]} updated, {totals[2]} unchanged.")
+    return 0
+
+
+def write_import(grouped, dry_run, report):
     totals = [0, 0, 0]
     for mem, days in sorted(grouped.items()):
-        if not (mem / "INDEX.md").exists() and not args.dry_run:
+        if not (mem / "INDEX.md").exists() and not dry_run:
             init_layers(mem)
         counts = [0, 0, 0]
-        with (locked(mem) if not args.dry_run else contextlib.nullcontext()):
+        with (locked(mem) if not dry_run else contextlib.nullcontext()):
             for (week, day), states in sorted(days.items()):
-                for i, value in enumerate(merge_session_lines(mem / week / f"{day}.md", day, week, states, args.dry_run)):
+                for i, value in enumerate(merge_session_lines(mem / week / f"{day}.md", day, week, states, dry_run)):
                     counts[i] += value
         totals = [a + b for a, b in zip(totals, counts)]
-        print(f"{mem}: {len(days)} days, {counts[0]} new, {counts[1]} updated, {counts[2]} unchanged")
-    print(("dry run, nothing written. " if args.dry_run else "") + f"{totals[0]} new, {totals[1]} updated, {totals[2]} unchanged; {redacted} lines had secrets redacted.")
-    return 0
+        if report:
+            print(f"  {mem}: {len(days)} days, {counts[0]} new, {counts[1]} updated, {counts[2]} unchanged")
+    return totals
 
 
 # --- cli --------------------------------------------------------------------
@@ -1892,6 +2235,7 @@ HELP_GROUPS = (
     ("Read and find", (
         ("context", "dailylog context", "what a new session should know"),
         ("search", 'dailylog search "cloudflare tunnel"', "ranked search; ignores case and Vietnamese diacritics"),
+        ("show", 'dailylog show ab12cd34 --grep "firestore"', "one session in full, from the agent's own transcript"),
         ("related", "dailylog related nas-storage-layout", "notes connected by links, project, tags, rare words"),
         ("report", "dailylog report --day 2026-11-05", "one day by hour and agent"),
     )),
@@ -1903,7 +2247,7 @@ HELP_GROUPS = (
         ("alias", 'dailylog alias "phinh cache" "tran bo nho"', "teach search that two names mean one thing"),
     )),
     ("History", (
-        ("import", "dailylog import --agents claude --dry-run", "add past sessions from agents' history; no model tokens"),
+        ("import", "dailylog import --agents claude", "show what past sessions exist, then add them after you confirm"),
         ("consolidate", "dailylog consolidate --week 2026-W45", "list open weeks, print a week's checklist, close a week"),
     )),
     ("Setup and upkeep", (
@@ -2010,12 +2354,20 @@ def build_parser():
     item.add_argument("--capture", choices=["full", "meta"], default="full", help="meta leaves out prompt and reply text")
     item.add_argument("--remove", action="store_true")
     item.add_argument("--dry-run", action="store_true")
+    item = sub("show", cmd_show, "read one session in full from the agent's own transcript")
+    item.add_argument("session", help="session id, as printed by `dailylog search`")
+    item.add_argument("--grep", help="only entries containing this text")
+    item.add_argument("--prompts", action="store_true", help="only what the user typed")
+    item.add_argument("--day", help="YYYY-MM-DD")
+    item.add_argument("--full", action="store_true", help="do not shorten long messages")
+    item.add_argument("--max-chars", type=int, default=20000)
     item = sub("related", cmd_related, "find notes connected to a file by links, project, tags and rare shared words")
     item.add_argument("target", help="path relative to memory/, or a file name")
     item.add_argument("--limit", type=int, default=8)
     item = sub("alias", cmd_alias, "teach search that several names mean the same thing")
     item.add_argument("names", nargs="+")
-    item = sub("import", cmd_import, "add past sessions from agents' own history; local scan, no model tokens; safe to re-run")
+    item = sub("import", cmd_import, "show what agents' history holds, then add it after confirmation; no model tokens; safe to re-run")
+    item.add_argument("--yes", action="store_true", help="skip the question; agents pass this only after the user confirmed")
     item.add_argument("--agents", help="comma list: claude,codex,agy (default: all)")
     item.add_argument("--since", help="YYYY-MM-DD")
     item.add_argument("--capture", choices=["full", "meta"], default="full")

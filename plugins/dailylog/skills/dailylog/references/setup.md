@@ -41,9 +41,17 @@ Prompt and reply are cut to 140 characters and secret-like strings are redacted.
 
 ## Importing past sessions
 
-`dailylog import` scans each agent's own history and adds one session line per day. It reads those sources without changing them, uses no model tokens and is safe to re-run; `--dry-run` shows the counts first, and `--since`, `--agents` and `--capture meta` narrow it.
+`dailylog import` scans each agent's own history, reports how many sessions, days and new lines it found, and asks before writing. It adds one session line per day, reads those sources without changing them, uses no model tokens and is safe to re-run. Without a terminal it writes nothing until run again with `--yes`, which an agent passes only after the user confirms. `--dry-run` never writes, and `--since`, `--agents` and `--capture meta` narrow it.
 
 Subagent sessions are skipped. Antigravity reports steps rather than turns, and its start time is the last user message. Running it now and then also fills gaps when an agent's hook did not fire. These agents' files are internal formats, so a new version can break a scanner.
+
+## Three levels of detail
+
+1. **Day file:** each session lists its prompts with times (up to 200 characters each, 12 per day), files changed, commands run, commits and the last reply (up to 500 characters). Hooks add prompts as they happen; files and commands arrive with `dailylog import`.
+2. **`dailylog show <id>`:** one session in full, rendered on demand from the agent's own transcript. Search results print the id. Use `--grep`, `--prompts` or `--day` to keep the output small.
+3. **The transcript:** owned by the agent and never changed. If the agent deletes it, `show` stops working for that session and the day file remains.
+
+Text inside `<private>...</private>` is never written to a day file or shown. Secret patterns are redacted, but a pattern filter can miss things, so do not push `memory/` to a shared repo without reading it, or use `--capture meta`.
 
 ## Reading a day
 

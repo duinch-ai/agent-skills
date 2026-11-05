@@ -85,6 +85,8 @@ dailylog todo done switchfin "cast header"
 - Secrets. Dailylog refuses tokens, keys and passwords on write, redacts them from session records, and `dailylog lint` scans for them. Record where a secret lives instead.
 - Diffs or anything git already holds. Give the commit hash and the reason.
 - Knowledge about one repo's internals. Put it in that repo's docs and link to it, so it travels with the code.
+- Trivial/no-op sessions. Prompts like "hi", "hello", "ping", "test", or failed credit runs are filtered automatically.
+- Foreign workspace sessions. Sessions outside the target project's root are routed to `~/.dailylog` instead of polluting the project's `memory/`. Duplicate mirror prompts on the same day are deduplicated.
 
 ## Closing a week
 

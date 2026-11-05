@@ -1323,10 +1323,32 @@ def first_value(payload, *keys):
     return ""
 
 
-def hook_memory(cwd):
+TRIVIAL_PROMPTS = frozenset({
+    "hi", "hello", "ping", "reply hi", "reply with ok", "agy login", "ok", "test",
+    "aadex dsfdsf"
+})
+
+
+def is_subpath(path_str, parent_path):
+    try:
+        Path(path_str).expanduser().resolve().relative_to(Path(parent_path).expanduser().resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def hook_memory(cwd, root=None):
+    if root:
+        target = Path(root).expanduser().resolve()
+        if is_subpath(cwd, target):
+            return store_of(target)
+        return global_store()
     explicit = os.environ.get("DAILYLOG_ROOT")
     if explicit:
-        return store_of(Path(explicit).expanduser().resolve())
+        target = Path(explicit).expanduser().resolve()
+        if is_subpath(cwd, target):
+            return store_of(target)
+        return global_store()
     here = Path(cwd).expanduser()
     if here.is_dir():
         for candidate in [here.resolve(), *here.resolve().parents]:
@@ -1787,7 +1809,13 @@ def merge_session_lines(path, day, week, states, dry_run):
         unique.append(line)
     lines = unique
     added = updated = same = 0
+    seen_prompts = set()
     for state in sorted(states, key=lambda item: item["started"]):
+        norm_key = (fold(state.get("title", "")), fold(state.get("outcome", "")))
+        if norm_key[0] and norm_key in seen_prompts:
+            continue
+        if norm_key[0]:
+            seen_prompts.add(norm_key)
         line = session_line(state)
         at = positions.get(state["id"])
         if at is None:
@@ -1817,7 +1845,7 @@ def cmd_import(args):
     since = args.since or ""
     grouped, tally_stats, redacted = {}, {}, 0
     for agent in agents:
-        stats = {"sessions": 0, "lines": 0, "subagents": 0, "undated": 0, "errors": 0}
+        stats = {"sessions": 0, "lines": 0, "subagents": 0, "undated": 0, "trivial": 0, "errors": 0}
         tally_stats[agent] = stats
         for tally in SCANNERS[agent](stats):
             produced = list(tally.states(args.capture))
@@ -1826,13 +1854,21 @@ def cmd_import(args):
             for state in produced:
                 if state["day"] < since:
                     continue
+                if state["title"]:
+                    title_norm = re.sub(r"[^\w\s]", "", state["title"].lower()).strip()
+                    if title_norm in TRIVIAL_PROMPTS or (len(title_norm) <= 2 and title_norm not in ("ls", "rm", "cp", "mv", "cd")):
+                        stats["trivial"] += 1
+                        continue
+                    if "credit balance is too low" in state["title"].lower() or "credit balance is too low" in state["outcome"].lower():
+                        stats["trivial"] += 1
+                        continue
                 if getattr(tally, "steps", 0):
                     state["steps"] = tally.steps
                 stats["lines"] += 1
                 redacted += "[redacted]" in state["title"] + state["outcome"]
-                grouped.setdefault(hook_memory(state["cwd"]), {}).setdefault((state["week"], state["day"]), []).append(state)
+                grouped.setdefault(hook_memory(state["cwd"], args.root), {}).setdefault((state["week"], state["day"]), []).append(state)
     for agent, stats in tally_stats.items():
-        extras = "".join(f", {stats[k]} {k} skipped" for k in ("subagents", "undated", "errors") if stats[k])
+        extras = "".join(f", {stats[k]} {k} skipped" for k in ("subagents", "undated", "trivial", "errors") if stats[k])
         print(f"{agent}: {stats['sessions']} sessions, {stats['lines']} day lines{extras}")
     totals = [0, 0, 0]
     for mem, days in sorted(grouped.items()):

@@ -542,6 +542,33 @@ class Import(Base):
         self.home = empty
         self.assertIn("0 new", self.run_cli("import").stdout)
 
+    def test_import_filters_trivial_and_foreign_sessions(self):
+        self.seed()
+        # 1. Trivial session in current workspace
+        self.write_jsonl(self.home / ".claude/projects/x/claude-sess-trivial.jsonl", [
+            {"type": "user", "timestamp": "2026-10-05T09:00:00Z", "cwd": str(self.root), "message": {"content": "hello"}},
+            {"type": "assistant", "timestamp": "2026-10-05T09:01:00Z", "cwd": str(self.root), "message": {"model": "claude", "content": [{"type": "text", "text": "Hi"}]}},
+        ])
+        # 2. Foreign workspace session
+        cwd_foreign = str(self.base / "other-project")
+        foreign_dir = self.home / ".claude/projects/other"
+        foreign_dir.mkdir(parents=True)
+        self.write_jsonl(foreign_dir / "claude-sess-foreign.jsonl", [
+            {"type": "user", "timestamp": "2026-10-05T10:00:00Z", "cwd": cwd_foreign, "message": {"content": "Build foreign app"}},
+            {"type": "assistant", "timestamp": "2026-10-05T10:05:00Z", "cwd": cwd_foreign, "message": {"model": "claude", "content": [{"type": "text", "text": "Done foreign"}]}},
+        ])
+        out = self.run_cli("import").stdout
+        self.assertIn("trivial skipped", out)
+        # Trivial session was ignored
+        day_text = self.day("2026-W41", "2026-10-05") if (self.mem / "2026-W41" / "2026-10-05.md").exists() else ""
+        self.assertNotIn('"hello"', day_text)
+        # Foreign session did not contaminate workspace memory
+        self.assertNotIn("Build foreign app", day_text)
+        # Foreign session was routed to global store
+        global_day = self.home / ".dailylog/2026-W41/2026-10-05.md"
+        self.assertTrue(global_day.exists())
+        self.assertIn("Build foreign app", global_day.read_text(encoding="utf-8"))
+
     def test_many_pending_weeks_stay_short_in_context(self):
         self.seed()
         self.run_cli("import")

@@ -16,7 +16,9 @@ description: >-
 
 Agents forget everything between sessions and lose detail when context runs out. Dailylog keeps a Markdown memory that any agent can read, so each session starts from what earlier ones learned.
 
-Commands below use `dailylog`. If it is not on PATH, run `python3 <this skill>/scripts/dailylog.py`.
+Commands below use `dailylog`. If it is not on PATH, run `python3 <this skill>/scripts/dailylog.py`. `dailylog help` lists every command with examples, and `dailylog help <command>` shows its options.
+
+When invoked with arguments, such as `/dailylog help` or `/dailylog search lru cache`, run `dailylog` with those arguments and show the result in the user's language.
 
 ## The layers
 

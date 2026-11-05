@@ -78,6 +78,13 @@ class Layers(Base):
         self.assertEqual(lint.returncode, 1)
         self.assertNotIn(token, lint.stdout)
 
+    def test_environment_secret_is_refused(self):
+        self.init()
+        text = 'export TORBOX_API_TOKEN="abc123def456"'
+        self.assertNotEqual(self.run_cli("log", text, ok=False).returncode, 0)
+        self.run_cli("log", "set TORBOX_API_TOKEN in the keychain")
+        self.run_cli("log", "export FOO_TOKEN=$VALUE")
+
     def test_todo_lifecycle(self):
         self.init()
         self.run_cli("todo", "add", "Switchfin", "Fix cast header")
@@ -576,6 +583,23 @@ class Import(Base):
             (self.mem / week).mkdir()
         out = self.run_cli("context").stdout
         self.assertIn("weeks are not consolidated (2026-W40 to 2026-W43)", out)
+
+
+class Help(Base):
+    def test_guide_lists_every_command(self):
+        out = self.run_cli("help").stdout
+        listed = self.run_cli("--help").stdout
+        import re
+        names = re.search(r"\{([a-z,-]+)\}", listed).group(1).split(",")
+        self.assertGreater(len(names), 15)
+        for name in names:
+            self.assertIn(f"  {name} ", out)
+        self.assertIn('dailylog search "cloudflare tunnel"', out)
+        self.assertEqual(self.run_cli().stdout, out)
+
+    def test_one_command_and_unknown_topic(self):
+        self.assertIn("--dry-run", self.run_cli("help", "import").stdout)
+        self.assertNotEqual(self.run_cli("help", "nope", ok=False).returncode, 0)
 
 
 class Wire(Base):

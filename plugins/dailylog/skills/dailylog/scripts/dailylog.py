@@ -54,6 +54,7 @@ SECRET_PATTERNS = {
     "AWS key": r"\bAKIA[0-9A-Z]{16}\b",
     "Slack token": r"\bxox[abprs]-[A-Za-z0-9-]{10,}",
     "private key": r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    "environment secret": r"\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY)[A-Z0-9_]*\s*=\s*['\"]?[^\s'\"`<>{}$]{6,}",
     "credential assignment":
         r"(?i)\b(?:password|passwd|pwd|secret|api[_-]?key|access[_-]?token)\b\s*[:=]\s*['\"]?[^\s'\"`<>{}]{6,}",
 }
@@ -1887,13 +1888,67 @@ def cmd_import(args):
 
 # --- cli --------------------------------------------------------------------
 
+HELP_GROUPS = (
+    ("Read and find", (
+        ("context", "dailylog context", "what a new session should know"),
+        ("search", 'dailylog search "cloudflare tunnel"', "ranked search; ignores case and Vietnamese diacritics"),
+        ("related", "dailylog related nas-storage-layout", "notes connected by links, project, tags, rare words"),
+        ("report", "dailylog report --day 2026-11-05", "one day by hour and agent"),
+    )),
+    ("Write", (
+        ("log", 'dailylog log "Fixed the crash, commit abc123" -p ting -s done', "add a line to today's log"),
+        ("todo", 'dailylog todo add ting "Fix splash icon"', "open tasks: add, start, done, list"),
+        ("new", 'dailylog new knowledge nas-ports --summary "..." --body "..."', "a project, knowledge note or decision"),
+        ("verify", "dailylog verify knowledge/nas-ports.md", "mark a note as re-checked today"),
+        ("alias", 'dailylog alias "phinh cache" "tran bo nho"', "teach search that two names mean one thing"),
+    )),
+    ("History", (
+        ("import", "dailylog import --agents claude --dry-run", "add past sessions from agents' history; no model tokens"),
+        ("consolidate", "dailylog consolidate --week 2026-W45", "list open weeks, print a week's checklist, close a week"),
+    )),
+    ("Setup and upkeep", (
+        ("init", "dailylog init --wire", "create memory/ in this folder"),
+        ("install-hooks", "dailylog install-hooks --scope global", "record every session automatically"),
+        ("wire", "dailylog wire", "add the rules block to AGENTS.md"),
+        ("lint", "dailylog lint", "check for secrets, stale notes, broken links, open weeks"),
+        ("index", "dailylog index", "rebuild the generated part of INDEX.md"),
+        ("hook", "", "internal: called by agent hooks"),
+        ("help", "dailylog help search", "this guide, or one command's options"),
+    )),
+)
+
+
+def cmd_help(args):
+    parser = build_parser()
+    choices = parser._subparsers._group_actions[0].choices
+    topic = getattr(args, "topic", None)
+    if topic:
+        if topic not in choices:
+            fail(f"no command {topic!r}. Run `dailylog help` to list them.")
+        choices[topic].print_help()
+        return 0
+    print("dailylog: long-term memory shared by every agent and session.\n")
+    print("Data lives in the nearest memory/ folder, else ~/.dailylog. Commands use no model tokens.")
+    for title, commands in HELP_GROUPS:
+        print(f"\n{title}")
+        for name, _, purpose in commands:
+            print(f"  {name:<15}{purpose}")
+    print("\nExamples")
+    for _, commands in HELP_GROUPS:
+        for _, example, _ in commands:
+            if example:
+                print(f"  {example}")
+    print("\nOptions for one command: dailylog help <command>")
+    return 0
+
+
 
 def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", help="folder containing memory/, or ~/.dailylog (default: $DAILYLOG_ROOT, then search upward)")
     common.add_argument("--instance", help="label for log lines (default: $DAILYLOG_INSTANCE, then auto-detect)")
     parser = argparse.ArgumentParser(prog="dailylog", description="Layered long-term memory shared by coding agents.")
-    subs = parser.add_subparsers(dest="command", required=True)
+    subs = parser.add_subparsers(dest="command")
 
     def sub(name, func, help_text):
         item = subs.add_parser(name, parents=[common], help=help_text, description=help_text)
@@ -1969,6 +2024,8 @@ def build_parser():
     item.add_argument("--day", help="YYYY-MM-DD (default: today)")
     item.add_argument("--agent")
     item.add_argument("--width", type=int, default=160)
+    item = sub("help", cmd_help, "show how to use dailylog, or the options of one command")
+    item.add_argument("topic", nargs="?", help="a command name")
     item = sub("index", cmd_index, "regenerate the generated block of INDEX.md")
     item = sub("lint", cmd_lint, "check for secrets, stale notes, broken links and pending weeks")
     item.add_argument("--stale-days", type=int, default=STALE_DAYS)
@@ -1980,7 +2037,7 @@ def main(argv=None):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    return args.func(args) if args.command else cmd_help(args)
 
 
 if __name__ == "__main__":

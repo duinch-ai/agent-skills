@@ -4,7 +4,7 @@ description: >-
   Interactive project base architect, 6-Gate task execution harness, Clean Architecture
   & UDF standardizer, Shift-Left DevSecOps security & Git/Agent hook guard, and
   reference-repo-first engineering guide across Android, KMP/CMP, Flutter, iOS/Swift,
-  Web (React/Next.js/Vue/TS), and Backend (Python/FastAPI, Go, Node.js/NestJS).
+  Rust, Web (React/Next.js/Vue/TS), and Backend (Python/FastAPI, Go, Node.js/NestJS).
   Activate whenever creating/scaffolding a project, standardizing an existing repo
   with tickable checkbox options, writing/fixing/refactoring ANY feature or bug,
   enforcing SOLID/DRY and file-length caps, or setting up pre-commit/pre-push security
@@ -69,6 +69,7 @@ Load reference manuals progressively **only as needed**:
 - **Multi-Agent Harness & Tickable Base Module Specs** → [`references/agent-harness-spec.md`](./references/agent-harness-spec.md)
 - **Mobile Famous Reference Repos (Android, KMP, Flutter, iOS)** → [`references/stacks-mobile.md`](./references/stacks-mobile.md)
 - **Web & Backend Famous Reference Repos (Web, Python, Go, NestJS)** → [`references/stacks-web-backend.md`](./references/stacks-web-backend.md)
+- **Rust Idioms, Platform Targets & CI/CD** → [`references/stacks-rust.md`](./references/stacks-rust.md)
 
 ---
 
@@ -92,7 +93,7 @@ Never guess architecture or base modules. Run `detect`, then present **tickable 
    - `(Recommended) Network Client (Auth/Retry) + Local DB/Storage Repository Base`
    - `(Recommended) Design System Tokens + Type-Safe Navigation (Client) / OpenAPI + Healthchecks (Backend)`
    - `(Recommended) Strict Compiler Flags + Linter/Formatter + Architecture Boundary Tests`
-   - `Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI`
+   - `Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI (Rust: Linux/macOS/Windows matrix)`
 4. **Q4 — AI Agent Harness, Persistent Memory, Git Hooks & Security Shields** *(`is_multi_select: true` checkboxes)*:
    - `(Recommended) Universal Agent & 6-Gate Execution Harness (AGENTS.md + execution-harness.md + security-gate.md + layer rules)`
    - `(Recommended) Cross-Session Memory & Codebase Map (.agents/CODEBASE_MAP.md + memory/active-plan.md + lessons.md)`

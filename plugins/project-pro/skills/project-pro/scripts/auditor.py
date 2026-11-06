@@ -70,6 +70,11 @@ OWASP_REGEXES: list[tuple[str, str, re.Pattern[str]]] = [
     ("WARN", "Dangerous Dynamic Code Execution / Shell Interpolation", re.compile(r"(?:\bsubprocess\.(?:run|Popen|call)\([^)]*shell\s*=\s*True|\bdangerouslySetInnerHTML\b)")),
 ]
 
+RUST_DOMAIN_IMPORT_RE = re.compile(
+    r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?use\s+"
+    r"(?:(?:crate::)?(?:data|presentation|infrastructure|ui)::|crate::\{[^}]*\b(?:data|presentation|infrastructure|ui)::)"
+)
+
 COMMIT_MSG_RE = re.compile(
     r"^(?:Merge\b|Revert\b|(?:feat|fix|refactor|perf|security|test|docs|build|ci|chore|style)(?:\([a-zA-Z0-9_./\-]+\))?!?: .{3,})"
 )
@@ -225,6 +230,14 @@ def audit_project(target: Path, warn_lines: int = 300, max_lines: int = 450, sta
                     if re.search(r"\b(import|from)\b.*(\.presentation\.|\.data\.|/presentation/|/data/)", s):
                         if ".core.domain" not in s:
                             errors.append(f"Clean Arch Violation in `{rel_file}:{idx}` -> Domain imports outer layer (`{s}`)")
+                if suffix == ".rs":
+                    source = "\n".join(lines[:100])
+                    for match in RUST_DOMAIN_IMPORT_RE.finditer(source):
+                        line_number = source.count("\n", 0, match.start()) + 1
+                        statement = lines[line_number - 1].strip()
+                        errors.append(
+                            f"Clean Arch Violation in `{rel_file}:{line_number}` -> Domain imports an outer Rust module (`{statement}`)"
+                        )
 
     if scanned_sec > 0 and not any("Secret" in e or "Sensitive file" in e for e in errors):
         passes.append(f"Zero hardcoded secrets or sensitive files across {scanned_sec} scanned files.")

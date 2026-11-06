@@ -43,8 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--pattern", default=None, help="Presentation/flow pattern (e.g. mvi, mvvm-udf, tca, bloc, fsd)")
     p_init.add_argument(
         "--features",
-        default="solid-dry,typed-errors,di-core,network-storage,ui-nav,arch-lint",
-        help="Comma-separated base feature IDs ticked by user",
+        default=None,
+        help="Comma-separated base feature IDs (Rust defaults to the multi-platform CI workflow)",
     )
     p_init.add_argument(
         "--agents",
@@ -99,12 +99,19 @@ def main() -> int:
 
     if args.cmd == "init":
         info = STACK_CATALOG[args.stack]
+        default_features = "solid-dry,typed-errors,di-core,network-storage,ui-nav,arch-lint"
+        if args.stack == "rust":
+            default_features += ",testing-ci"
         results = init_project(
             target=Path(args.target),
             stack=args.stack,
             arch=args.arch or info["recommended_arch"],
             pattern=args.pattern or info["recommended_pattern"],
-            features=[x.strip() for x in args.features.split(",") if x.strip()],
+            features=[
+                x.strip()
+                for x in (args.features if args.features is not None else default_features).split(",")
+                if x.strip()
+            ],
             agents=[x.strip() for x in args.agents.split(",") if x.strip()],
             ref_repo=args.ref_repo,
             project_name=args.name,

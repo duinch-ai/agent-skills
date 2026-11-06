@@ -105,7 +105,17 @@ def run_wizard(target: Path, force: bool = False) -> int:
     pattern = _select_single("3. Chọn Flow / State Pattern", info["patterns"], info["recommended_pattern"])
     repo_choices = [(r["repo"], f"{r['repo']} — {r['why'][:72]}...") for r in info["repos"]]
     ref_repo = _select_single("4. Chọn Famous Reference Repo chuẩn để neo theo", repo_choices, info["repos"][0]["repo"])
-    features = _select_multi("5. Tick chọn các Base Modules & Quality Gates muốn dựng", FEATURE_CHOICES)
+    feature_choices = FEATURE_CHOICES
+    if stack == "rust":
+        feature_choices = [
+            (
+                key,
+                "GitHub Actions CI (Linux/macOS/Windows matrix)" if key == "testing-ci" else label,
+                default or key == "testing-ci",
+            )
+            for key, label, default in FEATURE_CHOICES
+        ]
+    features = _select_multi("5. Tick chọn các Base Modules & Quality Gates muốn dựng", feature_choices)
     agents = _select_multi("6. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
     scaffold = _select_single(
         "7. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",

@@ -75,10 +75,13 @@ def init_project(
         write_safe(".agents/rules/execution-harness.md", tpl.render_execution_harness_rule(info))
         write_safe(".agents/rules/security-gate.md", tpl.render_security_rule())
         write_safe(".agents/rules/domain-layer.md", tpl.render_domain_rule(info, arch))
-        write_safe(".agents/rules/data-layer.md", tpl.render_data_rule(features))
-        write_safe(".agents/rules/presentation-layer.md", tpl.render_presentation_rule(pattern))
+        write_safe(".agents/rules/data-layer.md", tpl.render_data_rule(features, info))
+        write_safe(".agents/rules/presentation-layer.md", tpl.render_presentation_rule(pattern, info))
         write_safe(".editorconfig", tpl.render_editorconfig())
         _ensure_gitignore_secrets(target, created)
+
+    if stack == "rust" and "testing-ci" in features:
+        write_safe(".github/workflows/rust.yml", tpl.render_rust_ci_workflow())
 
     if "claude-gemini" in agent_set:
         write_safe(

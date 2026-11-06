@@ -37,6 +37,17 @@ def render_agents_md(
             "- **Lightweight Modular**: Separate pure core logic (`core/`) from I/O adapters (`adapters/`) and entrypoints.\n"
             "- Avoid empty pass-through abstractions (KISS & YAGNI)."
         )
+    if info["label"].startswith("Rust "):
+        dep_rules = (
+            "- **Dependency Rule**: Keep domain crates/modules independent from UI, transport, database, and runtime frameworks.\n"
+            "- **Rust Modeling**: Prefer ownership-based APIs, enums/newtypes, traits at real boundaries, and `Result<T, E>`; do not impose DTO/Entity or sealed UI-state patterns by default.\n"
+            "- **Platform Contract**: Build/test Linux, macOS, and Windows in CI; add Android, iOS, WebAssembly, or embedded targets only when declared and provisioned with their SDK/linker."
+        )
+        solid_rules = "Use ownership, borrowing, enums, and traits to model invariants; introduce wire/database models only at real boundaries. Keep state types as simple as the UI requires."
+        implementation_style = "Build from domain types and behavior outward; use Rust-native adapters and UI state only where the project needs them."
+    else:
+        solid_rules = "Separate `*Dto`, `*Entity`, `Domain`, and `*UiState` models. Sealed states over boolean soup (`isLoading && isError` banned)."
+        implementation_style = "Build Inside-Out (`Domain -> Data -> State -> UI`) using the layer-specific models and state holder."
 
     return f"""# {name} — AI Agent Engineering & Security Contract
 
@@ -62,8 +73,8 @@ def render_agents_md(
 ## 4. Mandatory 6-Gate Execution & Behavioral Guardrails
 1. **Think & Ground (`karpathy-skills`)**: Read `.agents/CODEBASE_MAP.md`, `.agents/memory/lessons.md`, and `referenceRepo` before coding. Surface hidden assumptions; push back on unsafe anti-patterns; write `.agents/memory/active-plan.md` for > 3-file tasks.
 2. **Surgical & Bounded Files**: Touch ONLY lines/files required. **1 File = 1 Primary Responsibility** (`> 300 LOC` = WARN, `> 450 LOC` = FAIL).
-3. **Disciplined Coding (`obra/superpowers`)**: Build Inside-Out (`Domain -> Data -> State -> UI`) for features; for bugs, trace **Root Cause** + **3-Strike Stop** (if 3 fixes fail, STOP & re-evaluate architecture). Zero `TODO` stubs, zero dead code.
-4. **SOLID & Anti-False-DRY**: Separate `*Dto`, `*Entity`, `Domain`, and `*UiState` models. Sealed states over boolean soup (`isLoading && isError` banned). Guard clauses (`<= 3` indent levels), immutable by default.
+3. **Disciplined Coding (`obra/superpowers`)**: {implementation_style} For bugs, trace **Root Cause** + **3-Strike Stop** (if 3 fixes fail, STOP & re-evaluate architecture). Zero unfinished stubs, zero dead code.
+4. **SOLID & Anti-False-DRY**: {solid_rules} Guard clauses (`<= 3` indent levels), immutable by default.
 5. **Security & Paranoid Review (`gstack`)**: Zero hardcoded secrets, parameterized SQL, redacted logs, check race conditions/N+1/pagination bounds. Never bypass Git hooks with `--no-verify`.
 6. **Self-Healing & Terse Delivery (`caveman`)**: Run `Single Test` -> `Lint/Typecheck` -> `audit` until green; log non-obvious pitfalls to `.agents/memory/lessons.md`; report concisely with file links.
 
@@ -83,16 +94,32 @@ def render_agents_md(
 
 def render_execution_harness_rule(info: dict[str, Any]) -> str:
     cmds = info["commands"]
+    if info["label"].startswith("Rust "):
+        feature_flow = (
+            "Model domain behavior with owned/borrowed values, enums/newtypes, and narrow traits where a real boundary needs one; implement adapters at I/O edges and use `Result<T, E>` for recoverable errors. Add UI state/message types only when the chosen UI architecture needs them."
+        )
+        bugfix_notes = "Do not replace errors with `unwrap()`/`expect()` on runtime paths; preserve ownership and cancellation semantics."
+        no_leftovers = "Ban `todo!()`, `unimplemented!()`, avoidable panics, and unused imports."
+        cancellation_note = "Do not swallow cancellation or turn it into a success-shaped fallback."
+        tests = "Cover behavior with unit/integration tests; run native tests on Linux/macOS/Windows and compile each declared cross target with its required SDK/linker."
+        security = "Review unsafe blocks and invariants, dependency changes, platform-specific input boundaries, and secrets/signing material."
+    else:
+        feature_flow = "`Domain` (entities, narrow ports, `DomainError`) -> `Data` (DTO/Entity, Mappers, RepoImpl) -> `State Holder` (Sealed `UiState`, `Intent`) -> `Stateless UI` -> `DI/Nav`."
+        bugfix_notes = "Ban blind `try/catch`, arbitrary delays, and unsafe casts."
+        no_leftovers = "Ban `// TODO`, fake production returns, unused imports, or swallowed `CancellationException`/`CancelledError`."
+        cancellation_note = ""
+        tests = "Cover happy path, empty state, offline/error mapping, and invalid inputs using fast in-memory Fakes."
+        security = "Audit diff for race conditions, N+1 queries, and unbounded lists."
     return f"""# Task Execution Harness (Mandatory for Every Coding Request)
 
 1. **Gate 1 — Grounding & Assumptions**: Read `.agents/CODEBASE_MAP.md`, `.agents/memory/lessons.md`, and `referenceRepo` conventions. Surface assumptions upfront; track > 3-file work in `.agents/memory/active-plan.md`.
 2. **Gate 2 — Surgical File Split**: Touch only required files/lines (`karpathy-skills`). Keep 1 primary responsibility per file (`> 300 LOC` = WARN, `> 450 LOC` = FAIL).
 3. **Gate 3 — Implementation & 3-Strike Debugging**:
-   - **Feature**: `Domain` (entities, narrow ports, `DomainError`) -> `Data` (DTO/Entity, Mappers, RepoImpl) -> `State Holder` (Sealed `UiState`, `Intent`) -> `Stateless UI` -> `DI/Nav`.
-   - **Bugfix**: Trace root cause; test 1 hypothesis at a time; **STOP after 3 failed attempts** (`obra/superpowers`) to reassess architecture.
-   - **No Leftovers**: Ban `// TODO`, fake production returns, unused imports, or swallowed `CancellationException`/`CancelledError`.
-4. **Gate 4 — Edge-Case Unit Tests**: Cover happy path, empty state, offline/error mapping, and invalid inputs using fast in-memory **Fakes**.
-5. **Gate 5 — Paranoid Check & Self-Healing**: Audit diff for race conditions, N+1 queries, and unbounded lists; run `{cmds['test_single']}` and `{cmds['lint']}` until green.
+   - **Feature**: {feature_flow}
+   - **Bugfix**: Trace root cause; test 1 hypothesis at a time; **STOP after 3 failed attempts** (`obra/superpowers`) to reassess architecture. {bugfix_notes}
+   - **No Leftovers**: {no_leftovers} {cancellation_note}
+4. **Gate 4 — Edge-Case Unit Tests**: {tests}
+5. **Gate 5 — Paranoid Check & Self-Healing**: {security} Run `{cmds['test_single']}` and `{cmds['lint']}` until green; run the stack security audit before delivery.
 6. **Gate 6 — Lessons & Terse Output**: Append new project gotchas to `.agents/memory/lessons.md`; deliver concise high-signal summary (`caveman`).
 """
 
@@ -109,6 +136,14 @@ def render_security_rule() -> str:
 
 def render_domain_rule(info: dict[str, Any], arch: str) -> str:
     forbidden = ", ".join(f"`{x.strip()}`" for x in info["domain_forbidden_imports"])
+    if info["label"].startswith("Rust "):
+        return f"""# Domain Layer Guardrails (`{arch}`)
+
+1. **Zero Framework Leakage**: Domain modules must not depend on UI/runtime crates such as {forbidden}.
+2. **Rust Types**: Prefer value types, enums, and explicit `Result<T, E>`; keep repository/port traits narrow and consumer-owned. Introduce separate wire/database models only where serialization or persistence boundaries require them.
+3. **Ownership & Safety**: Keep ownership simple and avoid unnecessary shared mutability. Do not use `unsafe` in domain code; if unavoidable, isolate it and document its safety invariants.
+4. **Pure Tests**: Keep domain tests independent from UI, network, database, and platform SDKs.
+"""
     return f"""# Domain Layer Guardrails (`{arch}`)
 
 1. **Zero Framework Leakage**: Domain files MUST NOT import {forbidden}.
@@ -117,7 +152,14 @@ def render_domain_rule(info: dict[str, Any], arch: str) -> str:
 """
 
 
-def render_data_rule(features: list[str]) -> str:
+def render_data_rule(features: list[str], info: dict[str, Any]) -> str:
+    if info["label"].startswith("Rust "):
+        return """# Data & Infrastructure Layer Guardrails
+
+1. Keep network, persistence, platform SDK, and serialization dependencies in adapters or infrastructure modules.
+2. Use DTO/entity types only when they represent a real wire/database boundary; map at that boundary and keep domain types independent.
+3. Translate I/O failures into meaningful errors at adapter boundaries. Preserve error sources and propagate cancellation rather than swallowing it.
+"""
     typed_note = (
         "Wrap external I/O calls in a boundary translator that maps HTTP/DB failures into typed `DomainError` (always rethrowing coroutine/async cancellation)."
         if "typed-errors" in features
@@ -131,12 +173,74 @@ def render_data_rule(features: list[str]) -> str:
 """
 
 
-def render_presentation_rule(pattern: str) -> str:
+def render_presentation_rule(pattern: str, info: dict[str, Any]) -> str:
+    if info["label"].startswith("Rust "):
+        return f"""# Presentation Layer Guardrails (`{pattern}`)
+
+1. Keep UI frameworks and platform APIs outside domain modules.
+2. Choose state/message/update patterns that fit the UI framework; use enums and exhaustive matching where they clarify valid states. Do not force a sealed UI-state abstraction onto simple applications.
+3. Keep platform-specific code behind target configuration or adapter boundaries, and verify each declared target in CI.
+"""
     return f"""# Presentation Layer Guardrails (`{pattern}`)
 
 1. **Unidirectional Data Flow (UDF)**: Views observe immutable `Sealed UiState` and emit user `Intent` / action callbacks upward.
 2. **Dumb Previewable Views**: Pass state slices and event lambdas into UI components (not whole ViewModels/Stores). Split sub-components into `components/` when a screen passes ~200 LOC.
 3. **No Framework Leaks in State Holders**: State holders (`ViewModel`, `BLoC`, `Reducer`, `Store`) never hold UI widget, `Context`, `BuildContext`, or DOM references.
+"""
+
+
+def render_rust_ci_workflow() -> str:
+    return """name: Rust CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Build workspace
+        run: cargo build --workspace
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Run tests
+        run: cargo test --workspace
+
+  dependency-audit:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit dependencies
+        run: cargo audit
 """
 
 

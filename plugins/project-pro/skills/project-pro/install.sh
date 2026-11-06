@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Universal Multi-Agent Installer for `project-pro`
-# Supports: Antigravity (IDE + CLI), Claude Code, OpenAI Codex, Gemini CLI,
-#           Cursor, OpenCode, Workspace (.agents/skills), and DeepSeek/API Prompt Export.
+# Supports: Antigravity (IDE + CLI), GitHub Copilot, Claude Code, OpenAI Codex,
+#           Gemini CLI, Cursor, OpenCode, Workspace (.agents/skills), and prompt export.
 set -euo pipefail
 
 SKILL_NAME="project-pro"
@@ -18,8 +18,9 @@ usage() {
 Usage: ./install.sh [targets...] [options]
 
 Targets:
-  all             Install to Antigravity IDE, .agents, Gemini CLI, Claude Code, Codex (+ Cursor/OpenCode if present) [DEFAULT]
+  all             Install to Antigravity, GitHub Copilot, .agents, Gemini CLI, Claude Code, Codex (+ Cursor/OpenCode if present) [DEFAULT]
   agy             Google Antigravity IDE (~/.gemini/config/skills) + .agents (~/.agents/skills)
+  copilot         GitHub Copilot personal skills (~/.copilot/skills)
   claude          Claude Code (~/.claude/skills)
   codex           OpenAI Codex (~/.codex/skills)
   gemini          Gemini CLI (~/.gemini/skills)
@@ -50,6 +51,7 @@ while [ $# -gt 0 ]; do
     all)
       add_target "$HOME/.gemini/config/skills"
       add_target "$HOME/.agents/skills"
+      add_target "$HOME/.copilot/skills"
       add_target "$HOME/.gemini/skills"
       add_target "$HOME/.claude/skills"
       add_target "$HOME/.codex/skills"
@@ -59,6 +61,9 @@ while [ $# -gt 0 ]; do
     agy|antigravity)
       add_target "$HOME/.gemini/config/skills"
       add_target "$HOME/.agents/skills"
+      ;;
+    copilot)
+      add_target "$HOME/.copilot/skills"
       ;;
     claude)
       add_target "$HOME/.claude/skills"
@@ -134,6 +139,7 @@ fi
 if [ ${#TARGETS[@]} -eq 0 ]; then
   add_target "$HOME/.gemini/config/skills"
   add_target "$HOME/.agents/skills"
+  add_target "$HOME/.copilot/skills"
   add_target "$HOME/.gemini/skills"
   add_target "$HOME/.claude/skills"
   add_target "$HOME/.codex/skills"

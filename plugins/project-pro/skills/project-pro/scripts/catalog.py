@@ -263,14 +263,14 @@ STACK_CATALOG: dict[str, dict[str, Any]] = {
             {"repo": "LukeMathWalker/zero-to-production", "url": "https://github.com/LukeMathWalker/zero-to-production", "why": "Production-grade Rust Clean Architecture, domain modelling, configuration, tracing, and integration tests."},
         ],
         "commands": {
-            "build": "cargo build",
+            "build": "cargo build --workspace",
             "test_all": "cargo test --workspace",
             "test_single": "cargo test -p <crate> -- <test_name>",
-            "lint": "cargo clippy --workspace -- -D warnings && cargo fmt --check",
+            "lint": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
             "sec_audit": "cargo audit",
         },
-        "boundary_tool": "Cargo Workspace crate isolation (`manga-core` pure domain/ports, `manga-ui` presentation, `manga-switch` entrypoint) + cargo-deny",
-        "domain_forbidden_imports": ["eframe", "egui", "sdl2", "winit"],
+        "boundary_tool": "Cargo Workspace crate isolation (pure domain crate, framework adapters, app entrypoint) + cargo-deny when dependency policy requires it",
+        "domain_forbidden_imports": ["eframe::", "egui::", "sdl2::", "winit::", "iced::", "tauri::"],
         "scaffold_dirs": {
             "modular-clean": [
                 "crates/manga-core/src/models", "crates/manga-core/src/providers",
@@ -302,7 +302,7 @@ FEATURE_CHOICES: list[tuple[str, str, bool]] = [
     ("network-storage", "Network Client (Auth/Retry Interceptors) + Local DB/Storage Repository Base", True),
     ("ui-nav", "Design System Tokens + Type-Safe Navigation (Client) / OpenAPI + Healthchecks (Backend)", True),
     ("arch-lint", "Strict Compiler Flags + Linter/Formatter + Architecture Boundary Tests", True),
-    ("testing-ci", "Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI", False),
+    ("testing-ci", "Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI (Rust: Linux/macOS/Windows matrix)", False),
 ]
 
 AGENT_CHOICES: list[tuple[str, str, bool]] = [

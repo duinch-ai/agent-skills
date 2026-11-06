@@ -1,6 +1,6 @@
 # ⚡ `project-pro` — Interactive Clean Architecture & Multi-Agent Skill
 
-> **Universal Agent Skill (`SKILL.md` Standard)** dành cho **Antigravity, Claude Code, OpenAI Codex, Gemini CLI, Cursor, Windsurf, Cline, Roo Code, DeepSeek, Aider**.  
+> **Universal Agent Skill (`SKILL.md` Standard)** dành cho **Antigravity, GitHub Copilot, Claude Code, OpenAI Codex, Gemini CLI, Cursor, Windsurf, Cline, Roo Code, DeepSeek, Aider**.
 > Giúp bạn **tích chọn (checkbox) dựng base dự án mới**, **chuẩn hoá dự án có sẵn**, **tra cứu repo mẫu nổi tiếng thay vì tự bịa cấu trúc**, ép chuẩn **Clean Architecture / MVI / MVVM / UDF / SOLID / DRY**, và **khởi tạo đầy đủ hệ sinh thái cho AI Agent** (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.agents/rules/`).
 
 ---
@@ -15,13 +15,15 @@
      - **Base Modules**: `Result<T, DomainError>`, `DI + Validated Config + Logging`, `Network (Auth/Retry) + Local DB`, `Design System + Typed Nav` (hoặc `OpenAPI + Healthcheck`), `Strict Linter + Boundary Tests`, `Testing Fakes + CI`.
      - **AI Agent Ecosystem**: `AGENTS.md` + `.agents/project-profile.json` + `.agents/rules/`, `CLAUDE.md`, `GEMINI.md`, `ADR-0001`, `.cursor/rules`, Pre-commit hook.
 2. **Reference-First ("Tham khảo Repo nổi tiếng — Không tự nghĩ lại bánh xe")**:
-   - Đóng gói sẵn danh mục repo chuẩn ngành cho **8 hệ sinh thái**:
+   - Đóng gói sẵn danh mục repo chuẩn ngành cho **9 hệ sinh thái**:
      - **Android**: `android/nowinandroid`, `chrisbanes/tivi`, `slackhq/circuit`
      - **KMP / CMP**: `chrisbanes/tivi`, `JetBrains/kotlinconf-app`, `touchlab/KaMPKit`, `philipplackner/CMP-Bookpedia`
      - **Flutter**: `bizz84/starter_architecture_flutter_firebase`, `felangel/bloc`, `VGVentures/very_good_cli`
      - **iOS / Swift**: `pointfreeco/swift-composable-architecture`, `nalexn/clean-architecture-swiftui`
      - **Web (React / Next / Vue)**: `alan2207/bulletproof-react`, `feature-sliced/documentation`, `antfu/vitesse`
      - **Python / Go / NestJS**: `zhanymkanov/fastapi-best-practices`, `cosmicpython/code`, `evrone/go-clean-template`, `ThreeDotsLabs/wild-workouts-go-ddd-example`, `Sairyss/domain-driven-hexagon`
+     - **Rust**: `emilk/egui`, `iced-rs/iced`, `LukeMathWalker/zero-to-production`
+   - Hướng dẫn Rust riêng về ownership/borrowing, typed errors, async/unsafe, Cargo workspace, các target Linux/macOS/Windows/Android/iOS/Wasm/embedded, cùng CI đa nền tảng và chiến lược release theo loại artifact: [`references/stacks-rust.md`](./references/stacks-rust.md).
 3. **6-Gate Execution Harness & Chống phình file cứng (300/450 LOC)**:
    - Mọi yêu cầu code bất kỳ (Feature mới, Fix bug, Refactor) đều đi qua 6 bước khóa cứng (`execution-harness.md`): Grounding repo mẫu → Kế hoạch tách file (`1 File = 1 Trách nhiệm`, `> 300 dòng = WARN`, `> 450 dòng = FAIL`) → Code Inside-Out / Root-Cause → Test biên với Fakes → Vòng lặp tự sửa lỗi.
 4. **4-Shield Security & Multi-Layer Hooks (Trước khi Code, Commit & Push)**:
@@ -39,7 +41,7 @@
 ```bash
 chmod +x ./install.sh scripts/project_pro.py
 
-# Cài đặt đồng loạt cho Antigravity IDE, .agents, Claude Code, OpenAI Codex, Gemini CLI:
+# Cài đặt đồng loạt cho Antigravity, GitHub Copilot, .agents, Claude Code, Codex, Gemini CLI:
 ./install.sh all --force
 
 # Kiểm tra trạng thái cài đặt trên máy:
@@ -99,5 +101,6 @@ project-pro/
     ├── presentation-patterns.md# MVI vs MVVM vs TCA vs BLoC/Riverpod vs FSD & UDF
     ├── agent-harness-spec.md   # Chuẩn khởi tạo đầy đủ AI Agent Harness & Base Modules
     ├── stacks-mobile.md        # Gold-standard repos & cấu trúc: Android, KMP, Flutter, iOS
-    └── stacks-web-backend.md   # Gold-standard repos & cấu trúc: Web, Python, Go, NestJS
+    ├── stacks-web-backend.md   # Gold-standard repos & cấu trúc: Web, Python, Go, NestJS
+    └── stacks-rust.md          # Rust idioms, cross-platform targets, CI/CD & releases
 ```

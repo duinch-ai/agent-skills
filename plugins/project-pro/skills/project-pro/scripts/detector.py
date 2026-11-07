@@ -57,6 +57,12 @@ def detect_project(target: Path) -> dict[str, Any]:
             detected_stack = "nestjs" if "@nestjs/core" in pkg_text else "web"
         elif (target / "pyproject.toml").is_file() or (target / "requirements.txt").is_file() or list(target.glob("*.py")):
             detected_stack = "python"
+        elif (target / "CMakeLists.txt").is_file() or (target / "Makefile").is_file() or list(target.glob("*.cpp")) or list(target.glob("app/src/*.cpp")):
+            cmake_files = list(target.glob("CMakeLists.txt")) + list(target.glob("*/CMakeLists.txt"))
+            if _any_file_contains(cmake_files, "switch") or _any_file_contains(cmake_files, "libnx") or _any_file_contains(cmake_files, "borealis") or (target / "resources/icon.png").is_file():
+                detected_stack = "cpp-switch"
+            else:
+                detected_stack = "cpp-switch"
 
     harness_files = {
         "AGENTS.md": (target / "AGENTS.md").is_file(),

@@ -35,7 +35,7 @@ Resolve `<SKILL_DIR>` to the directory containing this `SKILL.md`:
 python3 "<SKILL_DIR>/scripts/project_pro.py" detect --target "<PROJECT_DIR>"
 
 # 2. Lookup famous reference repos, patterns & GitHub search queries for a stack
-python3 "<SKILL_DIR>/scripts/project_pro.py" lookup --stack <android|kmp|flutter|ios|web|python|go|nestjs|rust>
+python3 "<SKILL_DIR>/scripts/project_pro.py" lookup --stack <android|kmp|flutter|ios|web|python|go|nestjs|rust|cpp-switch>
 
 # 3. Initialize multi-agent harness, 6-Gate rules, Git security hooks & runtime agent guards
 python3 "<SKILL_DIR>/scripts/project_pro.py" init \
@@ -70,6 +70,7 @@ Load reference manuals progressively **only as needed**:
 - **Mobile Famous Reference Repos (Android, KMP, Flutter, iOS)** → [`references/stacks-mobile.md`](./references/stacks-mobile.md)
 - **Web & Backend Famous Reference Repos (Web, Python, Go, NestJS)** → [`references/stacks-web-backend.md`](./references/stacks-web-backend.md)
 - **Rust Idioms, Platform Targets & CI/CD** → [`references/stacks-rust.md`](./references/stacks-rust.md)
+- **C++ Modern Idioms & Nintendo Switch Homebrew** → [`references/stacks-cpp-switch.md`](./references/stacks-cpp-switch.md)
 
 ---
 

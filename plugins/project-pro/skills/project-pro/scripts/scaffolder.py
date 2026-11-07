@@ -82,6 +82,8 @@ def init_project(
 
     if stack == "rust" and "testing-ci" in features:
         write_safe(".github/workflows/rust.yml", tpl.render_rust_ci_workflow())
+    elif stack == "cpp-switch" and "testing-ci" in features:
+        write_safe(".github/workflows/switch-build.yml", tpl.render_cpp_switch_ci_workflow(name))
 
     if "claude-gemini" in agent_set:
         write_safe(

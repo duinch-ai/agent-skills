@@ -244,6 +244,47 @@ jobs:
 """
 
 
+def render_cpp_switch_ci_workflow(project_name: str = "SwitchFS") -> str:
+    return f"""name: Nintendo Switch Build CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+jobs:
+  build-nx:
+    name: Build Switch NRO
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Switch Dependencies
+        run: |
+          dkp-pacman --noconfirm -Syu
+          dkp-pacman --noconfirm -S switch-curl switch-mbedtls switch-libarchive switch-pkg-config
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+      - name: Build NRO
+        run: |
+          cmake -B build \\
+            -DCMAKE_BUILD_TYPE=Release \\
+            -DPLATFORM_SWITCH=ON \\
+            -DVERSION_BUILD=${{{{ github.run_number }}}}
+          make -C build {project_name}.nro -j$(nproc)
+      - name: Upload NRO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: {project_name}-Switch-${{{{ github.run_number }}}}
+          path: build/{project_name}.nro
+"""
+
+
+
 def render_pre_commit_hook(skill_script: Path) -> str:
     return f"""#!/usr/bin/env bash
 # project-pro pre-commit gate: Staged Secret Scan + Clean Arch Boundary + Anti-God-File (<= 450 LOC)

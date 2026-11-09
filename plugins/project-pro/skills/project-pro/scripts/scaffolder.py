@@ -39,7 +39,7 @@ def init_project(
         agent_set.add("git-security-hooks")
 
     created: list[str] = []
-    skill_script = Path(__file__).resolve().parent / "project_pro.py"
+    skill_script = _portable_script_path(Path(__file__).resolve().parent / "project_pro.py")
 
     def write_safe(rel_path: str, content: str, executable: bool = False) -> None:
         dest = target / rel_path
@@ -207,6 +207,14 @@ def _ensure_gitignore_secrets(target: Path, created: list[str]) -> None:
         created.append("UPDATE: .gitignore (+secret protection entries)")
 
 
+def _portable_script_path(script: Path) -> str:
+    """Render the skill script path without baking a machine-specific home directory into committed files."""
+    try:
+        return "$HOME/" + script.relative_to(Path.home()).as_posix()
+    except ValueError:
+        return script.as_posix()
+
+
 def _write_or_merge_claude_settings(target: Path, guard_cmd: str, force: bool, created: list[str]) -> None:
     settings_path = target / ".claude" / "settings.json"
     hook_entry = {"matcher": "Bash", "hooks": [{"type": "command", "command": guard_cmd, "timeout": 10}]}
@@ -217,7 +225,7 @@ def _write_or_merge_claude_settings(target: Path, guard_cmd: str, force: bool, c
             created.append("SKIP (invalid JSON): .claude/settings.json")
             return
         pre = data.setdefault("hooks", {}).setdefault("PreToolUse", [])
-        if not any(guard_cmd in json.dumps(item) for item in pre):
+        if not any("project_pro.py" in json.dumps(item) and "agent-guard" in json.dumps(item) for item in pre):
             pre.append(hook_entry)
             settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
             created.append("UPDATE: .claude/settings.json (+PreToolUse agent-guard)")

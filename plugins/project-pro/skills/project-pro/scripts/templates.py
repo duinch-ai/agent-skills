@@ -285,7 +285,7 @@ jobs:
 
 
 
-def render_pre_commit_hook(skill_script: Path) -> str:
+def render_pre_commit_hook(skill_script: str) -> str:
     return f"""#!/usr/bin/env bash
 # project-pro pre-commit gate: Staged Secret Scan + Clean Arch Boundary + Anti-God-File (<= 450 LOC)
 set -euo pipefail
@@ -301,7 +301,7 @@ fi
 """
 
 
-def render_commit_msg_hook(skill_script: Path) -> str:
+def render_commit_msg_hook(skill_script: str) -> str:
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 if [ -f "{skill_script}" ]; then
@@ -310,11 +310,43 @@ fi
 """
 
 
-def render_pre_push_hook(skill_script: Path, info: dict[str, Any]) -> str:
+def _tool_binary(command: str) -> str:
+    """Executable that must exist for `command` (cargo plugin subcommands map to `cargo-<sub>`)."""
+    parts = command.split()
+    binary = parts[0]
+    if binary == "cargo" and len(parts) > 1 and parts[1] not in {"fmt", "clippy", "test", "build", "check"}:
+        binary = f"cargo-{parts[1]}"
+    return binary
+
+
+def _tool_probe(binary: str) -> str:
+    if "/" in binary:
+        return f'[ -x "{binary}" ]'
+    return f'command -v "{binary}" >/dev/null 2>&1'
+
+
+def _gated_step(label: str, command: str, on_fail: str = "") -> str:
+    """Run `command` when its tool exists, otherwise print a skip notice (single quotes: never command-substitute)."""
+    tool = _tool_binary(command)
+    run = f"{command} || {{ {on_fail} exit 1; }}" if on_fail else command
+    return (
+        f'echo "[pre-push] {label}"\n'
+        f"if {_tool_probe(tool)}; then\n"
+        f"  {run}\n"
+        "else\n"
+        f"  echo '[pre-push] (Skipped: {command.replace(chr(39), '')} — {tool} not installed)'\n"
+        "fi\n"
+    )
+
+
+def render_pre_push_hook(skill_script: str, info: dict[str, Any]) -> str:
     cmds = info["commands"]
-    lint_bin = cmds["lint"].split()[0]
-    test_bin = cmds["test_all"].split()[0]
-    sec_bin = cmds["sec_audit"].split()[0]
+    sec_fail = 'echo "[pre-push] Dependency vulnerability check failed." >&2;'
+    steps = (
+        _gated_step("2/4 Checking dependency vulnerabilities...", cmds["sec_audit"], sec_fail)
+        + _gated_step("3/4 Running lint & static typecheck...", cmds["lint"])
+        + _gated_step("4/4 Running unit test suite...", cmds["test_all"])
+    )
     return f"""#!/usr/bin/env bash
 # project-pro pre-push gate: Full Audit + CVE Check + Lint + Unit Tests
 set -euo pipefail
@@ -328,25 +360,7 @@ if command -v gitleaks >/dev/null 2>&1; then
   echo "[pre-push] Running gitleaks repository scan..."
   gitleaks detect --source "$ROOT_DIR" --redact --no-banner
 fi
-echo "[pre-push] 2/4 Checking dependency vulnerabilities..."
-if [ -x "{sec_bin}" ] || command -v "{sec_bin}" >/dev/null 2>&1; then
-  {cmds['sec_audit']} || {{ echo "[pre-push] High-severity dependency issue found." >&2; exit 1; }}
-else
-  echo "[pre-push] (Skipped `{cmds['sec_audit']}` — `{sec_bin}` not in PATH)"
-fi
-echo "[pre-push] 3/4 Running lint & static typecheck..."
-if [ -x "{lint_bin}" ] || command -v "{lint_bin}" >/dev/null 2>&1; then
-  {cmds['lint']}
-else
-  echo "[pre-push] (Skipped `{cmds['lint']}` — `{lint_bin}` not in PATH)"
-fi
-echo "[pre-push] 4/4 Running unit test suite..."
-if [ -x "{test_bin}" ] || command -v "{test_bin}" >/dev/null 2>&1; then
-  {cmds['test_all']}
-else
-  echo "[pre-push] (Skipped `{cmds['test_all']}` — `{test_bin}` not in PATH)"
-fi
-echo "[pre-push] All security, architecture, lint, and test gates PASSED."
+{steps}echo "[pre-push] All security, architecture, lint, and test gates PASSED."
 """
 
 

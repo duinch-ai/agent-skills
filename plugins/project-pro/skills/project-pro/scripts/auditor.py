@@ -1,8 +1,7 @@
-"""Architecture boundary, file-size, secret-leak, OWASP, commit-msg, and AI runtime guard auditor."""
+"""Architecture boundary, file-size, secret-leak, OWASP, commit-msg, and harness portability auditor."""
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import re
@@ -107,7 +106,11 @@ def _candidate_files(target: Path, staged_only: bool) -> list[Path]:
                 ["git", "-C", str(target), "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
                 check=True, capture_output=True, text=True,
             )
-            return [target / ln.strip() for ln in res.stdout.splitlines() if ln.strip()]
+            return [
+                target / ln.strip()
+                for ln in res.stdout.splitlines()
+                if ln.strip() and not any(part in IGNORE_DIRS for part in Path(ln.strip()).parts)
+            ]
         except Exception:
             return []
     if (target / ".git").exists():
@@ -134,6 +137,23 @@ def _candidate_files(target: Path, staged_only: bool) -> list[Path]:
 def _redact(text: str) -> str:
     s = text.strip()
     return (s[:20] + "...[REDACTED]..." + s[-8:]) if len(s) > 48 else (s[:8] + "...[REDACTED]")
+
+
+HARNESS_FILES = (
+    ".githooks/pre-commit", ".githooks/commit-msg", ".githooks/pre-push",
+    ".claude/settings.json", ".agents/hooks.json",
+)
+HOME_PATH_RE = re.compile(r"(?:/Users|/home)/[A-Za-z0-9._-]+/|[A-Za-z]:\\{1,2}Users\\{1,2}[A-Za-z0-9._-]+")
+
+
+def _machine_specific_harness_paths(target: Path) -> list[str]:
+    """List committed harness files that embed a user's home directory, which breaks hooks on other machines/CI."""
+    hits: list[str] = []
+    for rel in HARNESS_FILES:
+        fpath = target / rel
+        if fpath.is_file() and HOME_PATH_RE.search(fpath.read_text(encoding="utf-8", errors="ignore")):
+            hits.append(rel)
+    return hits
 
 
 def audit_project(target: Path, warn_lines: int = 300, max_lines: int = 450, staged_only: bool = False) -> dict[str, Any]:
@@ -165,6 +185,15 @@ def audit_project(target: Path, warn_lines: int = 300, max_lines: int = 450, sta
             passes.append("Git security & quality hooks (`pre-commit`, `commit-msg`, `pre-push`) present.")
         else:
             warnings.append("Missing `.githooks/` (`pre-commit` / `pre-push`) security & quality gates.")
+
+        machine_paths = _machine_specific_harness_paths(target)
+        if machine_paths:
+            warnings.append(
+                "Machine-specific absolute paths in harness files (use `$HOME/...`; re-run `init --force` or edit): "
+                + ", ".join(f"`{p}`" for p in machine_paths)
+            )
+        else:
+            passes.append("Harness hooks use portable paths (no hardcoded home directory).")
 
     forbidden_patterns: list[str] = list(stack_info["domain_forbidden_imports"]) if stack_info else []
     scanned_code = 0
@@ -286,34 +315,3 @@ def check_commit_message(msg_file: Path) -> int:
             return 1
     return 0
 
-
-def run_agent_guard() -> int:
-    raw = sys.stdin.read().strip()
-    if not raw:
-        return 0
-    try:
-        payload = json.loads(raw)
-    except Exception:
-        return 0
-
-    is_agy = "toolCall" in payload
-    args = payload.get("toolCall", {}).get("args", {}) if is_agy else payload.get("tool_input", {})
-    cmd = str((args or {}).get("CommandLine") or (args or {}).get("command") or "")
-
-    reason: str | None = None
-    if re.search(r"\bgit\s+(?:commit|push|merge)\b.*(?:\s--no-verify\b|\s-[a-zA-Z]*n\b)", cmd):
-        reason = "Blocked by project-pro: Bypassing Git security/architecture hooks (`--no-verify`) is prohibited."
-    elif re.search(r"\bgit\s+push\b.*(?:\s--force\b|\s-f\b).*\b(?:main|master)\b", cmd):
-        reason = "Blocked by project-pro: Force-pushing to `main`/`master` is prohibited."
-    elif re.search(r"\bgit\s+config\b.*\bcore\.hooksPath\b", cmd) and ".githooks" not in cmd:
-        reason = "Blocked by project-pro: Disabling `.githooks` via `core.hooksPath` is prohibited."
-    elif re.search(r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*\s+.*\.githooks\b", cmd):
-        reason = "Blocked by project-pro: Deleting `.githooks` is prohibited."
-
-    if is_agy:
-        print(json.dumps({"decision": "deny", "reason": reason} if reason else {"decision": "allow"}))
-        return 0
-    if reason:
-        sys.stderr.write(reason + "\n")
-        return 2
-    return 0

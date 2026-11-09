@@ -15,7 +15,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from auditor import audit_project, check_commit_message, format_audit_markdown, run_agent_guard
+from agent_guard import run_agent_guard
+from auditor import audit_project, check_commit_message, format_audit_markdown
 from catalog import ARCH_CHOICES, STACK_CATALOG
 from detector import detect_project, format_lookup_markdown, generate_codebase_map
 from scaffolder import init_project

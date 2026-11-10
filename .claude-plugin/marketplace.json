@@ -288,6 +288,23 @@
         "multi-agent",
         "hooks"
       ]
+    },
+    {
+      "name": "cache-idle-guard",
+      "displayName": "Cache Idle Guard — Prompt Cache Expiration & Session Hygiene Shield",
+      "source": "./plugins/cache-idle-guard",
+      "description": "Monitors session idle time and intercepts messages when prompt cache expires (Anthropic Claude 5m, Google Gemini 5m/60m), prompting users to run /compact or /clear to preserve prompt cache discounts, evade rate limits, and maintain context hygiene.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": [
+        "cache",
+        "prompt-cache",
+        "compact",
+        "rate-limit",
+        "session-hygiene",
+        "multi-agent",
+        "hooks"
+      ]
     }
   ]
 }

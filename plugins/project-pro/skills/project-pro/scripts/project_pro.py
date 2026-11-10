@@ -17,7 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from agent_guard import run_agent_guard
 from auditor import audit_project, check_commit_message, format_audit_markdown
-from catalog import ARCH_CHOICES, STACK_CATALOG
+from catalog import ARCH_CHOICES, PRODUCT_CATEGORIES, STACK_CATALOG
 from detector import detect_project, format_lookup_markdown, generate_codebase_map
 from scaffolder import init_project
 from wizard import run_wizard
@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_init = sub.add_parser("init", help="Initialize multi-agent harness, security hooks, profile & optional directories.")
     p_init.add_argument("--target", default=".", help="Target project directory")
+    p_init.add_argument("--category", choices=list(PRODUCT_CATEGORIES.keys()), default=None, help="Product category / purpose")
     p_init.add_argument("--stack", choices=list(STACK_CATALOG.keys()), required=True)
     p_init.add_argument("--arch", choices=[k for k, _ in ARCH_CHOICES], default=None)
     p_init.add_argument("--pattern", default=None, help="Presentation/flow pattern (e.g. mvi, mvvm-udf, tca, bloc, fsd)")
@@ -125,6 +126,7 @@ def main() -> int:
             scaffold_dirs=args.scaffold_dirs,
             force=args.force,
             locales=loc_list,
+            category=args.category,
         )
         print("\n".join(results))
         return 0

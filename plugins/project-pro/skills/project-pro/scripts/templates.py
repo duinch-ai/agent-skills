@@ -16,9 +16,19 @@ def render_agents_md(
     repo_url: str,
     features: list[str],
     locales: list[str] | None = None,
+    category: str | None = None,
 ) -> str:
     cmds = info["commands"]
     feat_badges = ", ".join(f"`{f}`" for f in features) if features else "`solid-dry`"
+
+    cat_line = ""
+    cat_pointer = ""
+    if category:
+        from catalog import PRODUCT_CATEGORIES
+
+        cat_title = PRODUCT_CATEGORIES.get(category, {}).get("label", category)
+        cat_line = f"- **Product Category**: `{cat_title}` (`{category}`)\n"
+        cat_pointer = " | [`category`](./.agents/rules/product-category.md)"
 
     if arch in {"clean", "modular-clean", "hexagonal"}:
         dep_rules = (
@@ -63,7 +73,7 @@ def render_agents_md(
 > Managed by `project-pro` (`.agents/project-profile.json`). Every coding task MUST follow the 6-Gate Execution Harness.
 
 ## 1. Architectural Profile
-- **Stack**: {info['label']}
+{cat_line}- **Stack**: {info['label']}
 - **Architecture**: `{arch}` | **Flow / State Pattern**: `{pattern}`
 - **Gold-Standard Reference Repo**: [`{repo}`]({repo_url}) — **consult & adapt patterns from this repo instead of inventing custom structures.**
 - **Enabled Capabilities**: {feat_badges}
@@ -91,7 +101,7 @@ def render_agents_md(
 - Task & Sub-Agent Workflow: [`.agents/rules/task-workflow.md`](./.agents/rules/task-workflow.md)
 - Codebase Map & Memory: [`.agents/CODEBASE_MAP.md`](./.agents/CODEBASE_MAP.md) | [`active-plan.md`](./.agents/memory/active-plan.md) | [`lessons.md`](./.agents/memory/lessons.md)
 - Execution & Security: [`.agents/rules/execution-harness.md`](./.agents/rules/execution-harness.md) | [`.agents/rules/security-gate.md`](./.agents/rules/security-gate.md)
-- Layer Guardrails: [`domain`](./.agents/rules/domain-layer.md) | [`data`](./.agents/rules/data-layer.md) | [`presentation`](./.agents/rules/presentation-layer.md){i18n_pointer}
+- Layer Guardrails: [`domain`](./.agents/rules/domain-layer.md) | [`data`](./.agents/rules/data-layer.md) | [`presentation`](./.agents/rules/presentation-layer.md){i18n_pointer}{cat_pointer}
 - ADR-0001: [`docs/architecture/ADR-0001-architecture.md`](./docs/architecture/ADR-0001-architecture.md)
 
 ## 6. GitHub Project Board & Parallel Sub-Agent Execution
@@ -226,6 +236,34 @@ Every user-facing label, button title, placeholder, dialog prompt, validation er
 1. When creating a new UI string, add the key to the base catalog (`{default_loc}`) and all configured locales ({loc_str}).
 2. Ensure fallback resolution is deterministic when a translation is pending.
 3. Keep naming semantic: `<module>_<screen>_<element>` (e.g. `auth_login_title`, `downloads_hub_empty_label`).
+"""
+
+
+def render_category_rule(category: str, info: dict[str, Any]) -> str:
+    from catalog import PRODUCT_CATEGORIES
+
+    cat_info = PRODUCT_CATEGORIES.get(category, {})
+    label = cat_info.get("label", category)
+    desc = cat_info.get("description", "")
+    guidance = cat_info.get("guidance", "")
+    rec_stacks = ", ".join(f"`{s}`" for s in cat_info.get("recommended_stacks", []))
+    rec_arch = cat_info.get("recommended_arch", "clean")
+
+    return f"""# Product Category Architecture Guardrails: {label}
+
+- **Category ID**: `{category}`
+- **Scope & Purpose**: {desc}
+- **Recommended Stacks**: {rec_stacks}
+- **Baseline Architecture Style**: `{rec_arch}`
+
+## 1. Core Engineering Contract
+{guidance}
+
+## 2. Operational & Lifecycle Checklist
+- **Configuration & Secrets**: Load all runtime variables from validated environments; zero hardcoded credentials, static test tokens, or local LAN IPs.
+- **Error Handling**: Follow strict domain error mapping (RFC 9457 for APIs, typed sealed errors for mobile/desktop, standard POSIX exit codes for CLI tools).
+- **Resource Management**: Bounded cache sizes, graceful shutdown on termination signals, and automatic release of platform handles/descriptors.
+- **Testing & Verification**: Pure unit tests using fast in-memory Fakes; integration tests against realistic platform runners.
 """
 
 

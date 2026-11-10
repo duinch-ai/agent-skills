@@ -45,6 +45,7 @@ python3 "<SKILL_DIR>/scripts/project_pro.py" init \
   --pattern <mvi|mvvm-udf|tca|bloc|riverpod|fsd|query-zustand|service-repo|cqrs> \
   --features "solid-dry,typed-errors,i18n,di-core,network-storage,ui-nav,arch-lint,testing-ci" \
   --agents "agents-root,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs,cursor-ide" \
+  [--category <mobile-app|desktop-app|multiplatform-app|web-app|backend-api|service-worker|cli-tool|library-sdk|embedded-homebrew>] \
   [--i18n] [--locales "vi,en,ja"] \
   [--ref-repo "<owner/repo>"] [--scaffold-dirs] [--force]
 
@@ -62,6 +63,7 @@ python3 "<SKILL_DIR>/scripts/project_pro.py" report --target "<PROJECT_DIR>"
 ```
 
 Load reference manuals progressively **only as needed**:
+- **Product Category Taxonomy & Operational Blueprints** → [`references/product-categories.md`](./references/product-categories.md)
 - **6-Gate Task Execution Runbook** (Feature / Bugfix / Refactor) → [`references/execution-harness.md`](./references/execution-harness.md)
 - **Agentic Patterns (`karpathy-skills`, `superpowers`, `gstack`, `ECC`, `planning-with-files`, `caveman`)** → [`references/agentic-patterns.md`](./references/agentic-patterns.md)
 - **Security Gateways, Git Hooks & Runtime Agent Hooks** → [`references/security-and-hooks.md`](./references/security-and-hooks.md)
@@ -77,7 +79,19 @@ Load reference manuals progressively **only as needed**:
 
 ## Mode A: Interactive Checkbox Wizard (New or Existing Project)
 
-Never guess architecture or base modules. Run `detect`, then present **tickable questions** via your platform's structured question tool (`ask_question` in Antigravity, `AskUserQuestion` in Claude Code, `request_user_input` in Codex, or numbered checkboxes in plain-text chat):
+Never guess architecture, product type, or base modules. Run `detect`, then present **tickable questions** via your platform's structured question tool (`ask_question` in Antigravity, `AskUserQuestion` in Claude Code, `request_user_input` in Codex, or numbered checkboxes in plain-text chat):
+
+0. **Q0 — Product Category & Project Purpose / Thể loại sản phẩm & Mục đích dự án** *(single-select)*:
+   - `(Recommended) [1] Mobile App (Android / iOS / Cross-Platform — Offline-first DB, lifecycle safety, touch UX)`
+   - `[2] Desktop App (macOS / Windows / Linux — Window bounds, file dialogs, system tray, non-blocking threadpool)`
+   - `[3] Multi-Platform Universal Client (Mobile + Desktop + Web — Expect/actual isolation, adaptive layout)`
+   - `[4] Web Application (SPA / SSR / SaaS Portal / Dashboard — Server vs client state, Core Web Vitals, CSP)`
+   - `[5] Backend Service / API (REST / gRPC / GraphQL / Microservice — OpenAPI, /healthz, RFC 9457, connection pool)`
+   - `[6] Background Worker / Daemon (Queue Consumer / Cron / Async Processor — Graceful shutdown, idempotency, retry/DLQ)`
+   - `[7] CLI Tool / Developer Utility (Command Line / TUI — < 50ms cold startup, POSIX exit codes, TTY aware)`
+   - `[8] Reusable Library / Client SDK (Shared Package — Stable SemVer API, zero unsolicited prints, minimal deps)`
+   - `[9] Embedded / Console Homebrew (Nintendo Switch / Low-Level / Game — Constrained RAM, gamepad input, RomFS)`
+   *(Chi tiết kỹ thuật & checklist cho từng thể loại: xem [`references/product-categories.md`](./references/product-categories.md))*
 
 1. **Q1 — Architecture Blueprint** *(single-select)*:
    - `Clean Architecture (3-Layer: Presentation → Domain ← Data)` | `Modular Clean (:feature:* + :core:*)` | `Vertical Slice / Feature-First` | `Hexagonal / Ports & Adapters + DDD` | `Lightweight Modular (KISS/YAGNI)`

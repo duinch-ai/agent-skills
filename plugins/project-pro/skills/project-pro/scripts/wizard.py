@@ -5,7 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from catalog import AGENT_CHOICES, ARCH_CHOICES, FEATURE_CHOICES, STACK_CATALOG, SUPPORTED_LOCALES_CHOICES
+from catalog import (
+    AGENT_CHOICES,
+    ARCH_CHOICES,
+    FEATURE_CHOICES,
+    PRODUCT_CATEGORIES,
+    PRODUCT_CATEGORY_CHOICES,
+    STACK_CATALOG,
+    SUPPORTED_LOCALES_CHOICES,
+)
 from detector import detect_project
 from scaffolder import init_project
 
@@ -99,18 +107,56 @@ def _select_multi(title: str, choices: list[tuple[str, str, bool]]) -> list[str]
 def run_wizard(target: Path, force: bool = False) -> int:
     det = detect_project(target)
     print(f"=== Project Pro Interactive Wizard ===\nTarget: {det['target']} (Mode: {det['mode']})")
-    stack = _select_single("1. Chọn Tech Stack", [(k, v["label"]) for k, v in STACK_CATALOG.items()], det["detected_stack"] or "kmp")
+
+    existing_profile = det.get("existing_profile") or {}
+    default_cat = existing_profile.get("productCategory")
+    if not default_cat:
+        st = det["detected_stack"]
+        if st in {"android", "ios"}:
+            default_cat = "mobile-app"
+        elif st in {"kmp", "flutter"}:
+            default_cat = "multiplatform-app"
+        elif st == "web":
+            default_cat = "web-app"
+        elif st in {"python", "go", "nestjs"}:
+            default_cat = "backend-api"
+        elif st == "rust":
+            default_cat = "desktop-app"
+        elif st == "cpp-switch":
+            default_cat = "embedded-homebrew"
+        else:
+            default_cat = "mobile-app"
+
+    category = _select_single(
+        "1. Chọn Mục đích Dự án & Thể loại Sản phẩm (Product Category)",
+        PRODUCT_CATEGORY_CHOICES,
+        default_cat,
+    )
+    cat_info = PRODUCT_CATEGORIES[category]
+    rec_stacks = cat_info["recommended_stacks"]
+
+    stack_choices = [
+        (k, f"{'★ ' if k in rec_stacks else '  '}{v['label']}")
+        for k, v in STACK_CATALOG.items()
+    ]
+    default_stack = det["detected_stack"] if det["detected_stack"] in rec_stacks else rec_stacks[0]
+    stack = _select_single(
+        f"2. Chọn Tech Stack (Khuyên dùng: {', '.join(rec_stacks)})",
+        stack_choices,
+        default_stack,
+    )
     info = STACK_CATALOG[stack]
-    arch = _select_single("2. Chọn Kiến trúc (Architecture Style)", ARCH_CHOICES, info["recommended_arch"])
-    pattern = _select_single("3. Chọn Flow / State Pattern", info["patterns"], info["recommended_pattern"])
+    rec_arch = cat_info.get("recommended_arch") or info["recommended_arch"]
+    arch = _select_single("3. Chọn Kiến trúc (Architecture Style)", ARCH_CHOICES, rec_arch)
+    rec_pattern = cat_info.get("recommended_pattern") if any(k == cat_info.get("recommended_pattern") for k, _ in info["patterns"]) else info["recommended_pattern"]
+    pattern = _select_single("4. Chọn Flow / State Pattern", info["patterns"], rec_pattern)
     repo_choices = [(r["repo"], f"{r['repo']} — {r['why'][:72]}...") for r in info["repos"]]
-    ref_repo = _select_single("4. Chọn Famous Reference Repo chuẩn để neo theo", repo_choices, info["repos"][0]["repo"])
+    ref_repo = _select_single("5. Chọn Famous Reference Repo chuẩn để neo theo", repo_choices, info["repos"][0]["repo"])
     i18n_info = info.get("i18n", {})
     i18n_standard = i18n_info.get("standard", "Platform Standard i18n")
-    existing_profile = det.get("existing_profile") or {}
     existing_feats = existing_profile.get("selectedFeatures") or []
     i18n_choice = _select_single(
-        "5. Hỗ trợ đa ngôn ngữ (i18n/l10n)?",
+        "6. Hỗ trợ đa ngôn ngữ (i18n/l10n)?",
         [
             ("yes", f"Có — Thiết lập sẵn kiến trúc đa ngôn ngữ ({i18n_standard})"),
             ("no", "Không — Chỉ dùng ngôn ngữ đơn bản mặc định"),
@@ -124,7 +170,7 @@ def run_wizard(target: Path, force: bool = False) -> int:
             (code, label, code in existing_locs if existing_locs else default)
             for code, label, default in SUPPORTED_LOCALES_CHOICES
         ]
-        chosen_locales = _select_multi("5b. Tick chọn các ngôn ngữ ứng dụng cần hỗ trợ (Locales)", loc_choices)
+        chosen_locales = _select_multi("6b. Tick chọn các ngôn ngữ ứng dụng cần hỗ trợ (Locales)", loc_choices)
         if not chosen_locales:
             chosen_locales = ["vi", "en"]
 
@@ -146,22 +192,22 @@ def run_wizard(target: Path, force: bool = False) -> int:
         )
         for key, label, default in feature_choices
     ]
-    features = _select_multi("6. Tick chọn các Base Modules & Quality Gates muốn dựng", feature_choices)
+    features = _select_multi("7. Tick chọn các Base Modules & Quality Gates muốn dựng", feature_choices)
     if i18n_choice == "yes" and "i18n" not in features:
         features.append("i18n")
     elif i18n_choice == "no" and "i18n" in features:
         features.remove("i18n")
 
-    agents = _select_multi("7. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
+    agents = _select_multi("8. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
     scaffold = _select_single(
-        "8. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",
+        "9. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",
         [("yes", "Có — tạo luôn cây thư mục mẫu"), ("no", "Không — chỉ tạo bộ cấu hình Agent, Hooks & ADR")],
         "yes" if det["mode"] == "greenfield" else "no",
     )
     results = init_project(
         target=target, stack=stack, arch=arch, pattern=pattern, features=features,
         agents=agents, ref_repo=ref_repo, scaffold_dirs=(scaffold == "yes"), force=force,
-        locales=chosen_locales,
+        locales=chosen_locales, category=category,
     )
     print("\n=== Hoàn tất khởi tạo Project Pro ===")
     for line in results:

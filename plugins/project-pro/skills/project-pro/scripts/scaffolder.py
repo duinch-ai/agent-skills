@@ -25,6 +25,7 @@ def init_project(
     scaffold_dirs: bool = False,
     force: bool = False,
     locales: list[str] | None = None,
+    category: str | None = None,
 ) -> list[str]:
     target = target.resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -38,6 +39,22 @@ def init_project(
     agent_set = set(agents)
     if "precommit" in agent_set:
         agent_set.add("git-security-hooks")
+
+    if not category:
+        if stack in {"android", "ios"}:
+            category = "mobile-app"
+        elif stack in {"kmp", "flutter"}:
+            category = "multiplatform-app"
+        elif stack == "web":
+            category = "web-app"
+        elif stack in {"python", "go", "nestjs"}:
+            category = "backend-api"
+        elif stack == "rust":
+            category = "desktop-app"
+        elif stack == "cpp-switch":
+            category = "embedded-homebrew"
+        else:
+            category = "mobile-app"
 
     clean_locales = list(dict.fromkeys(locales or ["vi", "en"])) if "i18n" in features else []
 
@@ -60,6 +77,7 @@ def init_project(
         "generator": "project-pro",
         "updatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "projectName": name,
+        "productCategory": category,
         "stack": stack,
         "stackLabel": info["label"],
         "architecture": arch,
@@ -81,12 +99,13 @@ def init_project(
 
     if "agents-root" in agent_set:
         write_safe(".agents/project-profile.json", json.dumps(profile, indent=2, ensure_ascii=False) + "\n")
-        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features, clean_locales if "i18n" in features else None))
+        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features, clean_locales if "i18n" in features else None, category))
         write_safe(".agents/rules/execution-harness.md", tpl.render_execution_harness_rule(info))
         write_safe(".agents/rules/security-gate.md", tpl.render_security_rule())
         write_safe(".agents/rules/domain-layer.md", tpl.render_domain_rule(info, arch))
         write_safe(".agents/rules/data-layer.md", tpl.render_data_rule(features, info))
         write_safe(".agents/rules/presentation-layer.md", tpl.render_presentation_rule(pattern, info))
+        write_safe(".agents/rules/product-category.md", tpl.render_category_rule(category, info))
         if "i18n" in features:
             write_safe(".agents/rules/i18n-localization.md", tpl.render_i18n_rule(info, stack, clean_locales or ["vi", "en"]))
         write_safe(".editorconfig", tpl.render_editorconfig())

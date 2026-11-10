@@ -305,6 +305,22 @@
         "multi-agent",
         "hooks"
       ]
+    },
+    {
+      "name": "crashlytics",
+      "displayName": "Crashlytics Console Triage",
+      "source": "./plugins/crashlytics",
+      "description": "Reads and triages Firebase Crashlytics for any project through the console instead of the quota-starved public API: use the current app repo or any Crashlytics link, dump issues and stack traces per version, triage crashes and ANRs, and add notes, close or mute issues.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": [
+        "crashlytics",
+        "firebase",
+        "crash",
+        "anr",
+        "stack-trace",
+        "triage"
+      ]
     }
   ]
 }

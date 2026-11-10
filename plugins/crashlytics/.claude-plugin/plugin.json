@@ -1,0 +1,10 @@
+{
+  "name": "crashlytics",
+  "displayName": "Crashlytics Console Triage",
+  "version": "0.1.0",
+  "description": "Reads and triages Firebase Crashlytics for any project through the console instead of the quota-starved public API: use the current app repo or any Crashlytics link, dump issues and stack traces per version, triage crashes and ANRs, and add notes, close or mute issues.",
+  "author": {
+    "name": "nchungdev"
+  },
+  "keywords": ["crashlytics", "firebase", "crash", "anr", "stack-trace", "triage", "android", "ios"]
+}

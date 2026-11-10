@@ -8,7 +8,7 @@ from pathlib import Path
 import stat
 import subprocess
 
-from catalog import STACK_CATALOG
+from catalog import STACK_CATALOG, generate_i18n_scaffold_files
 from detector import generate_codebase_map
 import templates as tpl
 
@@ -24,6 +24,7 @@ def init_project(
     project_name: str | None = None,
     scaffold_dirs: bool = False,
     force: bool = False,
+    locales: list[str] | None = None,
 ) -> list[str]:
     target = target.resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -37,6 +38,8 @@ def init_project(
     agent_set = set(agents)
     if "precommit" in agent_set:
         agent_set.add("git-security-hooks")
+
+    clean_locales = list(dict.fromkeys(locales or ["vi", "en"])) if "i18n" in features else []
 
     created: list[str] = []
     skill_script = _portable_script_path(Path(__file__).resolve().parent / "project_pro.py")
@@ -68,15 +71,24 @@ def init_project(
         "selectedAgentTargets": sorted(agent_set),
         "commands": info["commands"],
     }
+    if "i18n" in features:
+        profile["i18n"] = {
+            "enabled": True,
+            "defaultLocale": clean_locales[0] if clean_locales else "vi",
+            "supportedLocales": clean_locales or ["vi", "en"],
+            "preset": info.get("i18n", {}).get("standard", "Standard Localization"),
+        }
 
     if "agents-root" in agent_set:
         write_safe(".agents/project-profile.json", json.dumps(profile, indent=2, ensure_ascii=False) + "\n")
-        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features))
+        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features, clean_locales if "i18n" in features else None))
         write_safe(".agents/rules/execution-harness.md", tpl.render_execution_harness_rule(info))
         write_safe(".agents/rules/security-gate.md", tpl.render_security_rule())
         write_safe(".agents/rules/domain-layer.md", tpl.render_domain_rule(info, arch))
         write_safe(".agents/rules/data-layer.md", tpl.render_data_rule(features, info))
         write_safe(".agents/rules/presentation-layer.md", tpl.render_presentation_rule(pattern, info))
+        if "i18n" in features:
+            write_safe(".agents/rules/i18n-localization.md", tpl.render_i18n_rule(info, stack, clean_locales or ["vi", "en"]))
         write_safe(".editorconfig", tpl.render_editorconfig())
         _ensure_gitignore_secrets(target, created)
 
@@ -161,7 +173,11 @@ def init_project(
         write_safe(".windsurfrules", pointer_text)
 
     if scaffold_dirs:
-        dirs = info.get("scaffold_dirs", {}).get(arch) or next(iter(info.get("scaffold_dirs", {}).values()), [])
+        dirs = list(info.get("scaffold_dirs", {}).get(arch) or next(iter(info.get("scaffold_dirs", {}).values()), []))
+        if "i18n" in features:
+            i18n_files = generate_i18n_scaffold_files(stack, clean_locales or ["vi", "en"], name)
+            for i18n_p, i18n_c in i18n_files.items():
+                write_safe(i18n_p, i18n_c)
         for d in dirs:
             dir_path = target / d
             dir_path.mkdir(parents=True, exist_ok=True)

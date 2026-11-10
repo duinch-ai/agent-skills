@@ -65,6 +65,21 @@ When the user ticks base options during `project-pro` setup, implement the selec
   - **TypeScript / Web / NestJS**: Discriminated union `Result<T, E = AppError>` (`{ ok: true; value: T } | { ok: false; error: E }`) + centralized API problem-details parser (`RFC 9457`).
   - **Python / Go**: Explicit domain exceptions caught by a single FastAPI exception handler (`RFC 9457 ProblemDetails`), or Go sentinel/typed domain errors wrapped with `fmt.Errorf("%w")` and translated at HTTP/gRPC transport edge.
 
+### `[x] i18n` — Multi-Language Architecture (i18n/l10n) & Platform Presets
+When enabled, enforce zero hardcoded user-facing strings in UI presentation, views, and ViewModels. Support multi-locale catalogs with fallbacks:
+- **Supported Locales Catalog**: Tiếng Việt (`vi`), English (`en`), Japanese (`ja`), Chinese Simplified (`zh`), Korean (`ko`), French (`fr`), Spanish (`es`), German (`de`), or any BCP 47 tag.
+- **Android (Kotlin/Compose)**: XML strings in `:core:designsystem/src/main/res/values/strings.xml` and `values-<lang>/strings.xml`; accessed in Compose via `stringResource(R.string.<id>, *args)`. Runtime language changes via `AppCompatDelegate.setApplicationLocales()`.
+- **KMP / CMP**: Compose Multiplatform Resources `Res.string.*` (`composeResources/values/strings.xml` and `values-<lang>/strings.xml`). ViewModels emit sealed `UiText` (`UiText.DynamicString` / `UiText.StringResourceId`) to prevent leaking Android `Context` or platform lifecycles.
+- **Flutter**: Official `flutter_localizations` + `intl` + `l10n.yaml` with ARB files (`lib/l10n/app_<lang>.arb`); accessed via `AppLocalizations.of(context)!.key`.
+- **iOS / Swift**: Modern String Catalog (`Localizable.xcstrings`); accessed via `Text("key")` or `String(localized: "key", bundle: .module)`.
+- **Web (React/Next.js/Vue/TS)**: `next-intl` (Next App Router, routing `/[locale]/...`, middleware, `messages/<lang>.json`), `react-i18next`, or `vue-i18n` with strict TypeScript keys.
+- **Backend (Python / Go / NestJS)**:
+  - Python: GNU gettext / Babel with `Accept-Language` request middleware and `locales/<lang>/LC_MESSAGES/messages.po`.
+  - Go: `nicksnyder/go-i18n/v2` with `locales/active.<lang>.json` and request-scoped `i18n.Localizer`.
+  - NestJS: `nestjs-i18n` with `src/i18n/<lang>/common.json` and `AcceptLanguageResolver`.
+- **Rust (Desktop GUI / Workspace)**: Centralized type-safe `strings` module with `enum AppLanguage` + `strings::<module>::<key>(lang)` functions or Mozilla Fluent `fluent-rs` (.ftl). Raw string literals in UI views are banned.
+- **C++ / Nintendo Switch Homebrew**: Borealis built-in i18n (`brls::loadTranslations("romfs:/i18n")`) reading `resources/romfs/i18n/<lang-TAG>/strings.json` via `brls::getStr("key")`.
+
 ### `[x] di-core` — Dependency Injection + Env Config + Structured Logging
 - **Config**: Fail-fast startup validation of environment variables / build configs (`pydantic-settings` in Python, `zod` env schema in TS, `BuildConfig` / `XCConfig` in mobile, `envconfig` in Go) — zero raw `os.getenv()` / `process.env` scattered in business code!
 - **DI**: Constructor injection wired at the Composition Root (`Hilt` / `Koin` / `metro` for Kotlin/KMP, `Riverpod` / `get_it+injectable` for Flutter, `swift-dependencies` / Factory container for iOS, FastAPI `Depends` / explicit container for Python, explicit `wire` or `cmd/app` struct wiring for Go, NestJS modules).

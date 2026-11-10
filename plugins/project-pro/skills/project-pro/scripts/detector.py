@@ -100,7 +100,11 @@ def format_lookup_markdown(stack: str, query: str | None = None) -> str:
         lines.append(f"## {info['label']} (`--stack {st}`)")
         lines.append(f"- **Recommended Architecture**: `{info['recommended_arch']}`")
         lines.append(f"- **Recommended Flow Pattern**: `{info['recommended_pattern']}`")
-        lines.append(f"- **Boundary Enforcement**: {info['boundary_tool']}\n")
+        lines.append(f"- **Boundary Enforcement**: {info['boundary_tool']}")
+        if "i18n" in info:
+            lines.append(f"- **i18n / Localization**: `{info['i18n']['standard']}` ({info['i18n']['tooling']})\n")
+        else:
+            lines.append("")
         lines.append("### Available Presentation / Flow Patterns")
         for key, desc in info["patterns"]:
             lines.append(f"- `{key}`: {desc}")

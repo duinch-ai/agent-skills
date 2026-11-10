@@ -43,8 +43,9 @@ python3 "<SKILL_DIR>/scripts/project_pro.py" init \
   --stack <stack> \
   --arch <clean|modular-clean|vertical-slice|hexagonal|lightweight> \
   --pattern <mvi|mvvm-udf|tca|bloc|riverpod|fsd|query-zustand|service-repo|cqrs> \
-  --features "solid-dry,typed-errors,di-core,network-storage,ui-nav,arch-lint,testing-ci" \
+  --features "solid-dry,typed-errors,i18n,di-core,network-storage,ui-nav,arch-lint,testing-ci" \
   --agents "agents-root,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs,cursor-ide" \
+  [--i18n] [--locales "vi,en,ja"] \
   [--ref-repo "<owner/repo>"] [--scaffold-dirs] [--force]
 
 # 4. Interactive terminal checkbox TUI (when run directly in a shell)
@@ -95,7 +96,32 @@ Never guess architecture or base modules. Run `detect`, then present **tickable 
    - `(Recommended) Design System Tokens + Type-Safe Navigation (Client) / OpenAPI + Healthchecks (Backend)`
    - `(Recommended) Strict Compiler Flags + Linter/Formatter + Architecture Boundary Tests`
    - `Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI (Rust: Linux/macOS/Windows matrix)`
-4. **Q4 — AI Agent Harness, Persistent Memory, Git Hooks & Security Shields** *(`is_multi_select: true` checkboxes)*:
+4. **Q4 — Multi-Language Support / Internationalization (i18n/l10n) & Locales** *(single-select & locale multi-select)*:
+   - **Kích hoạt đa ngôn ngữ**:
+     - `(Recommended) Có — Thiết lập sẵn kiến trúc đa ngôn ngữ (i18n/l10n) chuẩn theo nền tảng`
+     - `Không — Chỉ dùng ngôn ngữ đơn bản mặc định`
+   - **Danh sách ngôn ngữ hỗ trợ (Locales)** *(`is_multi_select: true` checkboxes)*:
+     - `(Recommended) [x] Tiếng Việt (vi / vi-VN)`
+     - `(Recommended) [x] English (en / en-US)`
+     - `[ ] 日本語 / Japanese (ja / ja-JP)`
+     - `[ ] 中文 / Chinese Simplified (zh / zh-CN)`
+     - `[ ] 한국어 / Korean (ko / ko-KR)`
+     - `[ ] Français / French (fr / fr-FR)`
+     - `[ ] Español / Spanish (es / es-ES)`
+     - `[ ] Deutsch / German (de / de-DE)`
+     *(Hoặc nhập danh sách mã ngôn ngữ BCP 47 tùy chọn: e.g. `vi,en,ja`)*
+   - **Preset kiến trúc đa ngôn ngữ chuẩn theo từng nền tảng khi chọn "Có"**:
+     - **Android (Kotlin + Jetpack Compose)**: `res/values/strings.xml` (base/en) + `res/values-<lang>/strings.xml`, `stringResource(...)`, chuỗi tập trung trong `:core:designsystem` hoặc `:core:resources`. Chuyển đổi ngôn ngữ runtime qua `AppCompatDelegate.setApplicationLocales()` hoặc Android 13+ `LocaleManager`.
+     - **KMP / CMP (Compose Multiplatform)**: Compose Multiplatform Resources `Res.string.*` (`composeResources/values/strings.xml`, `values-<lang>/strings.xml`) hoặc MOKO Resources, dùng sealed class `UiText` (`UiText.DynamicString` / `UiText.StringResourceId`) trong ViewModel để không rò rỉ Android `Context`.
+     - **Flutter**: Official `flutter_localizations`, `intl`, `l10n.yaml`, `.arb` catalogs (`lib/l10n/app_<lang>.arb`), `AppLocalizations.of(context)!.key` với code generation tự động.
+     - **iOS / Swift (SwiftUI + Swift 6)**: Modern **String Catalog** (`.xcstrings` / `Localizable.xcstrings`), `LocalizedStringKey`, `String(localized: "key", bundle: .module)` cho SPM packages. Nghiêm cấm hardcode raw text trong Views.
+     - **Web Frontend (React / Next.js / Vue / TS)**: `next-intl` (Next.js App Router, routing `/[locale]/...`, middleware, catalogs `messages/<lang>.json`), `react-i18next` (Vite/SPA), hoặc `vue-i18n` với strict TypeScript schemas.
+     - **Backend Python (FastAPI / Async)**: GNU gettext / `Babel` (`pybabel`), `Accept-Language` header middleware, catalogs `locales/<lang>/LC_MESSAGES/messages.po`.
+     - **Backend Go**: `nicksnyder/go-i18n/v2` + `golang.org/x/text/language`, JSON/TOML locale bundles (`locales/active.<lang>.json`), inject `i18n.Localizer` vào request context.
+     - **Backend Node.js / NestJS**: `nestjs-i18n` (JSON catalogs `src/i18n/<lang>/common.json`) hoặc `i18next`, `AcceptLanguageResolver`, type-safe translation keys.
+     - **Rust (Desktop GUI / Cargo Workspace)**: Centralized type-safe `strings` / `i18n` catalog (`AppLanguage { Vietnamese, English, ... }` enum + `strings::*` module) hoặc `fluent-rs` / `unic-langid`. Nghiêm cấm hardcode raw string literals trong UI views.
+     - **C++ / Nintendo Switch Homebrew**: Borealis built-in i18n (`brls::loadTranslations("romfs:/i18n")`), catalogs `resources/romfs/i18n/<lang-TAG>/strings.json`, truy xuất bằng `brls::getStr("key")`.
+5. **Q5 — AI Agent Harness, Persistent Memory, Git Hooks & Security Shields** *(`is_multi_select: true` checkboxes)*:
    - `(Recommended) Universal Agent & 6-Gate Execution Harness (AGENTS.md + execution-harness.md + security-gate.md + layer rules)`
    - `(Recommended) Cross-Session Memory & Codebase Map (.agents/CODEBASE_MAP.md + memory/active-plan.md + lessons.md)`
    - `(Recommended) Claude Code & Antigravity/Gemini Bridges (CLAUDE.md + GEMINI.md)`

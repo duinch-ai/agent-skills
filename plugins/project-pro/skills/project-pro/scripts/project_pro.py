@@ -47,6 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Comma-separated base feature IDs (Rust defaults to the multi-platform CI workflow)",
     )
+    p_init.add_argument("--i18n", action="store_true", help="Enable multi-language i18n architecture preset")
+    p_init.add_argument("--locales", default="vi,en", help="Comma-separated locale codes (default: vi,en)")
     p_init.add_argument(
         "--agents",
         default="agents-root,persistent-memory,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs",
@@ -103,21 +105,26 @@ def main() -> int:
         default_features = "solid-dry,typed-errors,di-core,network-storage,ui-nav,arch-lint"
         if args.stack == "rust":
             default_features += ",testing-ci"
+        feat_list = [
+            x.strip()
+            for x in (args.features if args.features is not None else default_features).split(",")
+            if x.strip()
+        ]
+        if args.i18n and "i18n" not in feat_list:
+            feat_list.append("i18n")
+        loc_list = [x.strip() for x in (args.locales or "vi,en").split(",") if x.strip()]
         results = init_project(
             target=Path(args.target),
             stack=args.stack,
             arch=args.arch or info["recommended_arch"],
             pattern=args.pattern or info["recommended_pattern"],
-            features=[
-                x.strip()
-                for x in (args.features if args.features is not None else default_features).split(",")
-                if x.strip()
-            ],
+            features=feat_list,
             agents=[x.strip() for x in args.agents.split(",") if x.strip()],
             ref_repo=args.ref_repo,
             project_name=args.name,
             scaffold_dirs=args.scaffold_dirs,
             force=args.force,
+            locales=loc_list,
         )
         print("\n".join(results))
         return 0

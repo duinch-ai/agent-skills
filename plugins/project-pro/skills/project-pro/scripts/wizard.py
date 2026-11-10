@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from catalog import AGENT_CHOICES, ARCH_CHOICES, FEATURE_CHOICES, STACK_CATALOG
+from catalog import AGENT_CHOICES, ARCH_CHOICES, FEATURE_CHOICES, STACK_CATALOG, SUPPORTED_LOCALES_CHOICES
 from detector import detect_project
 from scaffolder import init_project
 
@@ -105,6 +105,29 @@ def run_wizard(target: Path, force: bool = False) -> int:
     pattern = _select_single("3. Chọn Flow / State Pattern", info["patterns"], info["recommended_pattern"])
     repo_choices = [(r["repo"], f"{r['repo']} — {r['why'][:72]}...") for r in info["repos"]]
     ref_repo = _select_single("4. Chọn Famous Reference Repo chuẩn để neo theo", repo_choices, info["repos"][0]["repo"])
+    i18n_info = info.get("i18n", {})
+    i18n_standard = i18n_info.get("standard", "Platform Standard i18n")
+    existing_profile = det.get("existing_profile") or {}
+    existing_feats = existing_profile.get("selectedFeatures") or []
+    i18n_choice = _select_single(
+        "5. Hỗ trợ đa ngôn ngữ (i18n/l10n)?",
+        [
+            ("yes", f"Có — Thiết lập sẵn kiến trúc đa ngôn ngữ ({i18n_standard})"),
+            ("no", "Không — Chỉ dùng ngôn ngữ đơn bản mặc định"),
+        ],
+        "yes" if "i18n" in existing_feats or not existing_feats else "no",
+    )
+    chosen_locales = ["vi", "en"]
+    if i18n_choice == "yes":
+        existing_locs = existing_profile.get("i18n", {}).get("supportedLocales") or ["vi", "en"]
+        loc_choices = [
+            (code, label, code in existing_locs if existing_locs else default)
+            for code, label, default in SUPPORTED_LOCALES_CHOICES
+        ]
+        chosen_locales = _select_multi("5b. Tick chọn các ngôn ngữ ứng dụng cần hỗ trợ (Locales)", loc_choices)
+        if not chosen_locales:
+            chosen_locales = ["vi", "en"]
+
     feature_choices = FEATURE_CHOICES
     if stack == "rust":
         feature_choices = [
@@ -115,16 +138,30 @@ def run_wizard(target: Path, force: bool = False) -> int:
             )
             for key, label, default in FEATURE_CHOICES
         ]
-    features = _select_multi("5. Tick chọn các Base Modules & Quality Gates muốn dựng", feature_choices)
-    agents = _select_multi("6. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
+    feature_choices = [
+        (
+            key,
+            label,
+            True if (key == "i18n" and i18n_choice == "yes") else (False if (key == "i18n" and i18n_choice == "no") else default),
+        )
+        for key, label, default in feature_choices
+    ]
+    features = _select_multi("6. Tick chọn các Base Modules & Quality Gates muốn dựng", feature_choices)
+    if i18n_choice == "yes" and "i18n" not in features:
+        features.append("i18n")
+    elif i18n_choice == "no" and "i18n" in features:
+        features.remove("i18n")
+
+    agents = _select_multi("7. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
     scaffold = _select_single(
-        "7. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",
+        "8. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",
         [("yes", "Có — tạo luôn cây thư mục mẫu"), ("no", "Không — chỉ tạo bộ cấu hình Agent, Hooks & ADR")],
         "yes" if det["mode"] == "greenfield" else "no",
     )
     results = init_project(
         target=target, stack=stack, arch=arch, pattern=pattern, features=features,
         agents=agents, ref_repo=ref_repo, scaffold_dirs=(scaffold == "yes"), force=force,
+        locales=chosen_locales,
     )
     print("\n=== Hoàn tất khởi tạo Project Pro ===")
     for line in results:

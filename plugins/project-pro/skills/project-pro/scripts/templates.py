@@ -15,6 +15,7 @@ def render_agents_md(
     repo: str,
     repo_url: str,
     features: list[str],
+    locales: list[str] | None = None,
 ) -> str:
     cmds = info["commands"]
     feat_badges = ", ".join(f"`{f}`" for f in features) if features else "`solid-dry`"
@@ -49,6 +50,14 @@ def render_agents_md(
         solid_rules = "Separate `*Dto`, `*Entity`, `Domain`, and `*UiState` models. Sealed states over boolean soup (`isLoading && isError` banned)."
         implementation_style = "Build Inside-Out (`Domain -> Data -> State -> UI`) using the layer-specific models and state holder."
 
+    i18n_rule_line = ""
+    i18n_pointer = ""
+    if "i18n" in features and locales:
+        loc_str = ", ".join(locales)
+        std_name = info.get("i18n", {}).get("standard", "Platform i18n")
+        i18n_rule_line = f"\n- **Internationalization (i18n)**: Centralized catalog `{std_name}`. Zero raw hardcoded strings in UI. Supported locales: `{loc_str}`."
+        i18n_pointer = " | [`i18n`](./.agents/rules/i18n-localization.md)"
+
     return f"""# {name} — AI Agent Engineering & Security Contract
 
 > Managed by `project-pro` (`.agents/project-profile.json`). Every coding task MUST follow the 6-Gate Execution Harness.
@@ -67,7 +76,7 @@ def render_agents_md(
 - **Security Audit**: `{cmds['sec_audit']}`
 
 ## 3. Layer & Module Dependency Rules
-{dep_rules}
+{dep_rules}{i18n_rule_line}
 - **Boundary Enforcement**: {info['boundary_tool']}
 
 ## 4. Mandatory 6-Gate Execution & Behavioral Guardrails
@@ -82,7 +91,7 @@ def render_agents_md(
 - Task & Sub-Agent Workflow: [`.agents/rules/task-workflow.md`](./.agents/rules/task-workflow.md)
 - Codebase Map & Memory: [`.agents/CODEBASE_MAP.md`](./.agents/CODEBASE_MAP.md) | [`active-plan.md`](./.agents/memory/active-plan.md) | [`lessons.md`](./.agents/memory/lessons.md)
 - Execution & Security: [`.agents/rules/execution-harness.md`](./.agents/rules/execution-harness.md) | [`.agents/rules/security-gate.md`](./.agents/rules/security-gate.md)
-- Layer Guardrails: [`domain`](./.agents/rules/domain-layer.md) | [`data`](./.agents/rules/data-layer.md) | [`presentation`](./.agents/rules/presentation-layer.md)
+- Layer Guardrails: [`domain`](./.agents/rules/domain-layer.md) | [`data`](./.agents/rules/data-layer.md) | [`presentation`](./.agents/rules/presentation-layer.md){i18n_pointer}
 - ADR-0001: [`docs/architecture/ADR-0001-architecture.md`](./docs/architecture/ADR-0001-architecture.md)
 
 ## 6. GitHub Project Board & Parallel Sub-Agent Execution
@@ -186,6 +195,37 @@ def render_presentation_rule(pattern: str, info: dict[str, Any]) -> str:
 1. **Unidirectional Data Flow (UDF)**: Views observe immutable `Sealed UiState` and emit user `Intent` / action callbacks upward.
 2. **Dumb Previewable Views**: Pass state slices and event lambdas into UI components (not whole ViewModels/Stores). Split sub-components into `components/` when a screen passes ~200 LOC.
 3. **No Framework Leaks in State Holders**: State holders (`ViewModel`, `BLoC`, `Reducer`, `Store`) never hold UI widget, `Context`, `BuildContext`, or DOM references.
+"""
+
+
+def render_i18n_rule(info: dict[str, Any], stack: str, locales: list[str]) -> str:
+    i18n = info.get("i18n", {})
+    standard = i18n.get("standard", "Standard Localization")
+    tooling = i18n.get("tooling", "")
+    guidance = i18n.get("guidance", "")
+    loc_str = ", ".join(f"`{loc}`" for loc in locales)
+    default_loc = locales[0] if locales else "vi"
+
+    return f"""# Internationalization (i18n) & Localization Guardrails
+
+- **Architecture Standard**: `{standard}`
+- **Active Supported Locales**: {loc_str} (Default/Fallback: `{default_loc}`)
+- **Tooling & Access Pattern**: `{tooling}`
+
+## 1. Zero Hardcoded Strings Rule
+Every user-facing label, button title, placeholder, dialog prompt, validation error, and notification string MUST be resolved through the centralized string catalog. Raw string literals (e.g. `"Đọc truyện"`, `"Submit"`, `"Cancel"`) in presentation views, screens, or view models are strictly prohibited.
+
+## 2. Decoupled State & Context-Free ViewModels
+- Never pass UI framework context (`android.content.Context`, `BuildContext`, or DOM window) into ViewModels, Presenters, or UseCases.
+- For dynamic parameters (e.g. `"Trang %1$d / %2$d"`), return typed message identifiers, enums, or sealed wrapper models (`UiText.DynamicString` / `UiText.StringResourceId`) that the presentation layer resolves with its active locale.
+
+## 3. Platform-Tailored Implementation
+{guidance}
+
+## 4. Adding New Strings & Locales
+1. When creating a new UI string, add the key to the base catalog (`{default_loc}`) and all configured locales ({loc_str}).
+2. Ensure fallback resolution is deterministic when a translation is pending.
+3. Keep naming semantic: `<module>_<screen>_<element>` (e.g. `auth_login_title`, `downloads_hub_empty_label`).
 """
 
 

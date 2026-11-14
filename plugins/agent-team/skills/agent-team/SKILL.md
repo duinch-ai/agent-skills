@@ -43,7 +43,7 @@ Writes `.agent-team/config.json`, ignores `.agent-team/runs/`, installs the `ver
 and `sweeper` subagents into `.claude/agents/`, writes `.agents/rules/agent-workflow.md`
 (the concise working method, derived from `references/working-method.md`; never overwrites
 anything without `--force`), and prints which reviewer CLIs exist here. Config keys: base branch, round limits (3 verify,
-2 review), `max_parallel` (3), `coder_vendor`, `reviewer_preference`, `tasks_dir`.
+2 review), `max_parallel` (3), `reviewer_preference`, `vendor_family` (agy counts as gemini), `tasks_dir`.
 
 ## Workflow
 
@@ -57,7 +57,7 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    read-only, and get the human to approve the plan before any editing run.
 2. **Plan.** Split into subtasks touching disjoint files. One git worktree and branch per
    subtask, at most `max_parallel` at once.
-3. **Code (coder).** A coding subagent (for example `implementer`) works inside its
+3. **Code (coder).** The lead writes `Coder: <vendor>` in the task when assigning it. A coding subagent (for example `implementer`) works inside its
    worktree and follows `references/working-method.md` (grounding, small change, debugging
    method, review lens). Repo facts and coding standards come from the repo's `AGENTS.md`.
 4. **Verify.** For bugs first run `agent_team.py verify TASK-n --repro-before` on main
@@ -65,8 +65,9 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    `agent_team.py verify TASK-n --cwd <worktree>` runs every check and stores evidence in
    `.agent-team/runs/TASK-n/verify-<k>.json`. The `verifier` subagent turns failures into
    a short note for the coder. Three red rounds mean `blocked`: stop and ask a human.
-5. **Review (different vendor).** `agent_team.py review TASK-n --coder claude --cwd <worktree>`
-   picks an available reviewer that is not the coder's vendor, sends criteria plus the
+5. **Review (different vendor).** `agent_team.py review TASK-n --cwd <worktree>`
+   takes the coder from the task's `Coder:` field (or `--coder VENDOR`; no coder known means
+   the command stops), picks an available reviewer outside the coder's vendor family, sends criteria plus the
    diff over stdin in a read-only sandbox, and validates a JSON verdict
    (`references/cross-review.md`). Two rounds max. If no other vendor is available the
    command fails: do not fall back to the coder's own vendor.
@@ -111,7 +112,7 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
 
 ```
 agent_team.py init [--force]
-agent_team.py lint|verify|review|gate TASK-n [--cwd DIR]   (verify: --repro-before; review: --coder VENDOR; gate: --no-audit)
+agent_team.py lint|verify|review|gate TASK-n [--cwd DIR]   (verify: --repro-before; review: --coder VENDOR, default the task's Coder:; gate: --no-audit)
 agent_team.py report [--since 24h|7d]
 agent_team.py status
 ```

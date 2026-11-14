@@ -23,7 +23,6 @@ DEFAULTS = {
     "max_verify_rounds": 3,
     "max_review_rounds": 2,
     "max_parallel": 3,
-    "coder_vendor": "claude",
     "reviewer_preference": ["codex", "agy", "gemini", "claude"],
     "tasks_dir": "docs/tasks",
     "runs_dir": ".agent-team/runs",
@@ -32,6 +31,8 @@ DEFAULTS = {
     "max_diff_bytes": 200000,
     "output_tail_chars": 4000,
     # vendor -> argv list; prompt is piped on stdin, reply must be JSON on stdout.
+    # Antigravity (agy) usually runs Gemini models; override to e.g. {"agy": "claude"} if yours differs.
+    "vendor_family": {"agy": "gemini"},
     "reviewer_commands": {},
     "reviewer_models": {},
 }
@@ -58,6 +59,11 @@ def load_config(root):
         except (OSError, ValueError) as exc:
             raise SystemExit(f"invalid {path}: {exc}")
     return cfg
+
+
+def family(cfg, vendor):
+    """Model family of a vendor CLI; reviewer and coder must differ in family."""
+    return cfg["vendor_family"].get(vendor, vendor)
 
 
 class Ctx:

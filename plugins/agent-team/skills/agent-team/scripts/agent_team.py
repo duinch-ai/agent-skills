@@ -31,7 +31,7 @@ def build_parser():
             s.add_argument("--repro-before", action="store_true",
                            help="run the repro only; passes when it FAILS (bug exists)")
         if name == "review":
-            s.add_argument("--coder", help="vendor that wrote the code (default: config coder_vendor)")
+            s.add_argument("--coder", help="vendor that wrote the code (default: Coder: field in the task)")
         if name == "gate":
             s.add_argument("--no-audit", action="store_true")
     s = sub.add_parser("report", help="markdown morning report")

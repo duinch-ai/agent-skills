@@ -2,7 +2,7 @@
 
 Compatible header:   `# TASK-01 — Title`, `Status: ...`, `Priority: ...`
 Additions (ignored by project_board.py):
-  `Untrusted: yes`  `Type: bug`
+  `Untrusted: yes`  `Type: bug`  `Coder: <vendor>` (who wrote the code; the review excludes it)
   `## Repro`  with a `check:` line, `## Acceptance criteria` with bullets,
   each followed by an indented `check: <shell command>` line (exit 0 = pass).
 """
@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 HEADER = re.compile(r"^#\s+([A-Z][A-Z0-9]*-\d+)\s*[—–:-]*\s*(.*)$")
-META = re.compile(r"^(Status|Priority|Untrusted|Type|Base):\s*(.+?)\s*$")
+META = re.compile(r"^(Status|Priority|Untrusted|Type|Base|Coder):\s*(.+?)\s*$")
 CHECK = re.compile(r"^\s*(?:[-*]\s*)?check:\s*`?(.+?)`?\s*$")
 BULLET = re.compile(r"^\s*[-*]\s*(?:\[[ xX]\]\s*)?(.+?)\s*$")
 
@@ -40,6 +40,10 @@ class Task:
     @property
     def base(self):
         return self.meta.get("Base")
+
+    @property
+    def coder(self):
+        return (self.meta.get("Coder") or "").strip().lower() or None
 
 
 def parse_task(path):

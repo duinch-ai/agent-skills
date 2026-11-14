@@ -2,9 +2,10 @@
 
 ## Selection rule
 
-`review.available_reviewers`: walk `reviewer_preference`, skip the coder's vendor, keep
-vendors that are usable now. No candidate means the command fails; never review with the
-coder's own vendor.
+`review.available_reviewers`: walk `reviewer_preference`, skip every vendor in the coder's
+family (`vendor_family`, default agy = gemini), keep vendors that are usable now. The coder
+comes from the task's `Coder:` field or `--coder`; there is no default, a missing coder stops
+the command. No candidate means the command fails; never review with the coder's own family.
 
 ## Commands (verified on this machine with `--help`)
 

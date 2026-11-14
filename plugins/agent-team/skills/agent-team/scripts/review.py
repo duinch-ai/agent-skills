@@ -7,6 +7,7 @@ other vendors need `reviewer_commands` in the config.
 import json
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -36,10 +37,10 @@ SCHEMA = {
 
 
 def available_reviewers(cfg, coder):
-    """Vendors usable now, never including the coder's own vendor."""
+    """Vendors usable now, never from the coder's own vendor family."""
     out = []
     for name in cfg["reviewer_preference"]:
-        if name == coder:
+        if config.family(cfg, name) == config.family(cfg, coder):
             continue
         if name == "codex" and config.which("codex"):
             out.append(name)
@@ -157,15 +158,30 @@ def command_for(cfg, vendor, cwd, schema_path, out_path):
     return list(cfg["reviewer_commands"][vendor]), "stdout"
 
 
+def resolve_coder(cfg, task, arg):
+    """Coder vendor from --coder or the task's `Coder:` field; never guessed."""
+    if "coder_vendor" in cfg:
+        print("warning: coder_vendor in .agent-team/config.json is ignored; "
+              "set Coder: in the task or pass --coder", file=sys.stderr)
+    arg = arg.strip().lower() if arg else None
+    if arg and task.coder and arg != task.coder:
+        raise SystemExit(f"{task.id}: --coder '{arg}' conflicts with 'Coder: {task.coder}' in the task; "
+                         "fix one of them")
+    coder = arg or task.coder
+    if not coder:
+        raise SystemExit(f"{task.id}: coder unknown. Add 'Coder: <vendor>' to the task file or pass --coder")
+    return coder
+
+
 def review_task(ctx, task, cwd, coder=None, runner=subprocess.run):
     cfg = ctx.cfg
     d = ctx.runs(task.id)
-    coder = coder or cfg["coder_vendor"]
+    coder = resolve_coder(cfg, task, coder)
     if store.count(d, "review") >= cfg["max_review_rounds"]:
         raise SystemExit(f"{task.id}: review rounds exhausted ({cfg['max_review_rounds']}); mark blocked")
     cands = available_reviewers(cfg, coder)
     if not cands:
-        raise SystemExit(f"no reviewer from a vendor other than '{coder}' is available. Install codex or "
+        raise SystemExit(f"no reviewer outside the '{config.family(cfg, coder)}' family (coder '{coder}') is available. Install codex or "
                          "add a vendor to reviewer_commands (confirm flags with `<cli> --help`).")
     vendor = cands[0]
     prompt = build_prompt(task, get_diff(ctx, task, cwd))
@@ -186,5 +202,6 @@ def review_task(ctx, task, cwd, coder=None, runner=subprocess.run):
         path = store.write(d, "review-invalid", {"vendor": vendor, "problems": problems,
                                                  "raw_tail": safety.tail(safety.redact(raw or ""), 2000)})
         raise SystemExit(f"reviewer {vendor} returned an invalid verdict ({'; '.join(problems)}); see {path}")
-    rec = {"vendor": vendor, "coder": coder, **obj, **meta}
+    rec = {"vendor": vendor, "coder": coder, "coder_family": config.family(cfg, coder),
+           "reviewer_family": config.family(cfg, vendor), **obj, **meta}
     return store.write(d, "review", rec), rec

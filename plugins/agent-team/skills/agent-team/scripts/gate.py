@@ -4,6 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import config
 import store
 
 
@@ -42,8 +43,10 @@ def evaluate(ctx, task, cwd, run_audit=True):
             reasons.append("latest review is not approve")
         if rev.get("head") != head["head"]:
             reasons.append("latest review covered a different commit than HEAD; re-run review")
-        if rev.get("vendor") == rev.get("coder"):
-            reasons.append("reviewer vendor equals coder vendor")
+        if not rev.get("coder"):
+            reasons.append("review has no recorded coder")
+        elif config.family(ctx.cfg, rev.get("vendor")) == config.family(ctx.cfg, rev["coder"]):
+            reasons.append("reviewer and coder are from the same vendor family")
         highs = [f for f in rev.get("findings", []) if f.get("severity") == "high"]
         if highs:
             reasons.append(f"{len(highs)} unresolved high-severity finding(s)")

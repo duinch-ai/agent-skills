@@ -1,109 +1,90 @@
-# Task Execution Harness — Mandatory 6-Gate Loop for Every Coding Request
+# Coding Standards Checklist
 
-Every coding request (New Feature, Bugfix, Refactor, Performance Optimization, or API Integration) MUST pass through all **6 Gates** in order. Skipping gates leads to monolithic files, architecture leaks, surface-level symptom patches, and unverified broken builds.
-
----
-
-## Gate 1: Context, Memory & Reference Grounding ("Think Before Coding")
-
-1. **Read Project Map & Lessons First**: Inspect `AGENTS.md`, `.agents/project-profile.json`, `.agents/CODEBASE_MAP.md` (if present), and `.agents/memory/lessons.md` (project mistake ledger), plus neighboring files in the target module.
-2. **Consult Famous Reference Repo**: For non-trivial mechanics (pagination, offline sync, auth token refresh, deep links, queues, transactions), verify how the anchored `referenceRepo` implements it before designing classes.
-3. **Surface Assumptions & Push Back on Anti-Patterns (`karpathy-skills`)**:
-   - Never silently guess when requirements have conflicting interpretations — state assumptions or ask concisely upfront.
-   - If asked to implement an unsafe or architectural anti-pattern, point out the risk and propose the clean solution.
-4. **Disk-Backed Plan for Complex Tasks (`planning-with-files`)**:
-   - If the task touches **> 3–4 files** or spans multiple milestones, write/update `.agents/memory/active-plan.md` with exact file targets and `[ ]` checkboxes so progress survives context compaction or agent switching.
+What every code change in a project-pro repo must satisfy. It is the former Gates 2 to 5 of
+the old "6-Gate" loop; grounding (old Gate 1) and delivery/lessons (old Gate 6) are the working
+method of the `agent-team` skill (`references/working-method.md`, generated into the repo as
+`.agents/rules/agent-workflow.md`). The generated `.agents/rules/execution-harness.md` keeps its
+file name so existing detection and audit keep working; its content is this checklist.
 
 ---
 
-## Gate 2: Impact Map & Anti-God-File Split Plan
+## 1. File split (anti-God-file)
 
 Before creating or editing source files, plan the exact file breakdown:
 
-1. **One File = One Primary Responsibility**:
+1. **One file = one primary responsibility**:
    - Never bundle `Dto` + `Mapper` + `RepositoryImpl` into one file.
-   - Never bundle `UiState`/`Intent` + `ViewModel`/`Reducer` + `Screen` + `Sub-components` into one giant file (extract sub-components into `components/` as soon as a screen exceeds ~200 lines).
-2. **2-Tier File Length Hard Lock** *(excluding auto-generated files like `*.g.dart`, `*.freezed.dart`, `*.gen.ts`, `*_pb2.py`, `*.pb.go`, and migrations)*:
-   - **Target**: `< 250–300 LOC` per file.
-   - **`> 300 LOC` (`[WARN]`)**: Stop adding responsibilities; extract collaborators or UI sub-components.
-   - **`> 450 LOC` (`[FAIL]`)**: Hard block in `audit` and Git `pre-commit` hook. Must split before finishing!
-3. **Surgical Scope**: Touch only files required by the task. Do not reformat or refactor unrelated modules in the same change.
+   - Never bundle `UiState`/`Intent` + `ViewModel`/`Reducer` + `Screen` + sub-components into one
+     giant file (extract sub-components into `components/` once a screen exceeds ~200 lines).
+2. **2-tier file length lock** *(excluding auto-generated files like `*.g.dart`, `*.freezed.dart`,
+   `*.gen.ts`, `*_pb2.py`, `*.pb.go`, and migrations)*:
+   - **Target**: `< 250-300 LOC` per file.
+   - **`> 300 LOC` (`[WARN]`)**: stop adding responsibilities; extract collaborators or UI sub-components.
+   - **`> 450 LOC` (`[FAIL]`)**: hard block in `audit` and the Git `pre-commit` hook. Split before finishing.
+3. **Surgical scope**: touch only files required by the task; no unrelated reformatting.
 
 ---
 
-## Gate 3: Disciplined Implementation by Task Type
+## 2. Disciplined coding by change type
 
-### A. New Feature → Inside-Out (Contract-First)
-Build strictly from pure policy outward so every layer compiles against clean contracts:
-1. **`Domain`**: Entities/Value Objects → narrow Repository port interface → `DomainError` cases → UseCase (if needed).
-2. **`Data`**: Remote `*Dto` / Local `*Entity` → stateless Mappers (`toDomain`, `toEntity`) → `RepositoryImpl` with boundary error translation.
-3. **`Presentation State`**: Immutable `Sealed UiState` (zero boolean soup) + `Intent`/`Event` + `Effect` → `ViewModel`/`BLoC`/`Reducer`/`Store`.
-4. **`Stateless UI`**: Declarative screen/widget taking state + event lambdas + `@Preview`/`#Preview`/Storybook.
-5. **`Composition Root`**: DI bindings & type-safe route registration.
+### A. New feature: inside-out (contract-first)
+1. **`Domain`**: entities/value objects, narrow repository port, `DomainError` cases, use case if needed.
+2. **`Data`**: remote `*Dto` / local `*Entity`, stateless mappers (`toDomain`, `toEntity`), `RepositoryImpl`
+   with boundary error translation.
+3. **`Presentation State`**: immutable sealed `UiState` (no boolean soup) + `Intent`/`Event` + `Effect`,
+   in the `ViewModel`/`BLoC`/`Reducer`/`Store`.
+4. **`Stateless UI`**: declarative screen/widget taking state + event lambdas + preview.
+5. **`Composition root`**: DI bindings and type-safe route registration.
 
-### B. Bugfix → 4-Phase Root-Cause & 3-Strike Stop (`obra/superpowers`)
-1. Trace the exact data/state flow backward to locate the **root cause** (never silence symptoms with blind `try/catch`, arbitrary `delay(300)`, or unsafe `!!` / `as any` casts).
-2. Test **one hypothesis at a time**. **3-Strike Rule**: If **3 fix attempts fail**, **STOP CODING**, revert failed hacks, and re-evaluate the architectural assumption with the user.
-3. Write or update an automated regression test that reproduces the bug alongside the clean fix.
+### B. Bugfix
+Fix the root cause and add a regression test that failed before the fix. Banned: blind `try/catch`,
+arbitrary `delay(300)`, unsafe `!!` / `as any` casts. The debugging method, the reproduce-first rule and
+the 3-strike stop are stated once, in the agent-team working method.
 
-### C. Refactor → Behavior-Preserving Micro-Steps
-1. Ensure existing tests pass (or add characterization tests around untested logic first).
-2. Restructure without altering public observable behavior.
+### C. Refactor: behaviour-preserving micro-steps
+1. Existing tests pass first (or add characterization tests around untested logic).
+2. Restructure without changing public observable behaviour.
 
-### Universal Implementation Prohibitions
-- **Zero Unfinished Stubs**: Never leave `// TODO: implement later`, hardcoded mock arrays in production paths, or `throw NotImplementedError()`.
-- **Zero Dead Code**: Delete unused imports, commented-out old code blocks, and debug `print`/`console.log` statements.
-- **Security-by-Design**: Zero hardcoded keys/tokens/passwords, parameterized queries only, strict input validation at trust boundaries, redact sensitive fields in logs.
+### Universal prohibitions
+- **Zero unfinished stubs**: no `// TODO: implement later`, hardcoded mock arrays in production paths, or `throw NotImplementedError()`.
+- **Zero dead code**: delete unused imports, commented-out blocks and debug `print`/`console.log`.
+- **Security by design**: see section 3.
 
 ---
 
-## Gate 4: Deterministic Edge-Case Testing (Fakes over Mocks)
+## 3. Security
+
+Zero hardcoded keys/tokens/passwords or committed `.env`/keystores; parameterized SQL/ORM queries only;
+validate untrusted input at trust boundaries; redact tokens and PII in logs; never run `--no-verify`.
+Enforced by the Git hooks and `agent-guard` (see `security-and-hooks.md`).
+
+---
+
+## 4. Tests (fakes over mocks)
 
 Add or update fast unit tests covering:
 - Happy path (`Content` / `200 OK`)
 - Empty state (`Empty list`)
-- Failure & offline states (`NetworkUnavailable`, `Unauthorized`, `ValidationError`)
-- Boundary inputs & concurrency cancellation
+- Failure and offline states (`NetworkUnavailable`, `Unauthorized`, `ValidationError`)
+- Boundary inputs and concurrency cancellation
+
+Then run, in order, and fix every failure before finishing:
+- Targeted unit test (`commands.test_single` in `.agents/project-profile.json`)
+- Compiler/typecheck and linter (`commands.lint`)
+- Architecture, file-size and security audit:
+  ```bash
+  python3 "<SKILL_DIR>/scripts/project_pro.py" audit --target "<PROJECT_DIR>" --fail-on-error
+  ```
+- If new modules or directories were added, refresh the map:
+  ```bash
+  python3 "<SKILL_DIR>/scripts/project_pro.py" map --target "<PROJECT_DIR>" --write
+  ```
 
 ---
 
-## Gate 5: Paranoid Review & Self-Healing Verification Loop
+## 5. Task tracking (optional)
 
-1. **Paranoid Staff Check (`gstack` / `ECC`)**: Check your diff for race conditions (double-submit, stale search overwrite, token refresh stampede), N+1 queries, unbounded unpaginated lists, missing DB transactions, and IDOR/auth gaps.
-2. **Run Verification Commands Sequentially** (fix every failure before finishing):
-   - **Targeted Unit Test** (`commands.test_single` in `.agents/project-profile.json`)
-   - **Compiler / Typecheck & Linter** (`commands.lint`)
-   - **Architecture, File-Size & Security Audit**:
-     ```bash
-     python3 "<SKILL_DIR>/scripts/project_pro.py" audit --target "<PROJECT_DIR>" --fail-on-error
-     ```
-   - *(If new modules/directories were added)* Refresh `.agents/CODEBASE_MAP.md`:
-     ```bash
-     python3 "<SKILL_DIR>/scripts/project_pro.py" map --target "<PROJECT_DIR>" --write
-     ```
-**Rule**: Never claim completion while tests, lint, or `audit` fail.
-
----
-
-## Gate 6: Memory Update & Terse Auditable Delivery (`caveman` + `ECC`)
-
-1. If a non-obvious SDK pitfall, build quirk, or user correction surfaced during the task, append a 2-line prevention rule to `.agents/memory/lessons.md`.
-2. Report changes concisely grouped by layer with clickable file links and verification results — zero filler narration or giant pasted code blocks.
-
----
-
-## 7. GitHub Projects & Parallel Sub-Agent Execution Protocol
-
-To scale development across autonomous sub-agents and maintain strict progress tracking:
-
-1. **1 Task = 1 Atomic GitHub Issue**:
-   - Create issue with clear acceptance criteria and wireframe/contract references.
-   - Attach issue to the project's GitHub Project v2 board in the `Todo` column.
-2. **Status Progression**:
-   - `Todo`: Backlog / ready for intake.
-   - `In Progress`: Agent claims the task via `python3 scripts/workflow.py start <id>`, auto-switches to feature branch `feat/issue-<id>-...`.
-   - `Done`: On passing Gate 5 (Tests + 6-Gate Audit), agent runs `python3 scripts/workflow.py done <id>`, closing the issue and moving the board item to `Done`.
-3. **Parallel Sub-Agent Dispatch**:
-   - **Orchestrator Role**: The Primary Agent identifies independent tasks (e.g. distinct provider adapters or uncoupled UI views).
-   - **English Prompt Discipline**: Sub-agents must receive prompts in concise English to minimize token overhead (50–70% savings).
-   - **Clean Context & Immediate Kill**: Sub-agents operate with 0% historical context bleed; as soon as their task is verified and closed, the Primary Agent immediately terminates them (`manage_subagents kill`).
+Only when the profile ticks `task-tracking`: specs live in `docs/tasks/TASK-<n>.md`, the backlog in
+`docs/BACKLOG.md`, and board sync is done by the `task-board` skill (`project_board.py list|move|push|sync`).
+project-pro only creates the folders at setup time. Multi-agent team work (lead, coders, verifier,
+cross-vendor review, done gate) is the `agent-team` skill.

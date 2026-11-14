@@ -11,6 +11,7 @@ from typing import Any
 
 from catalog import IGNORE_DIRS, SOURCE_EXTENSIONS, STACK_CATALOG
 from detector import detect_project
+from tasktracking import profile_provider, provider_info
 
 TEXT_SCAN_EXTENSIONS = SOURCE_EXTENSIONS | {".json", ".yaml", ".yml", ".toml", ".properties", ".xml", ".env", ".sh"}
 GENERATED_FILE_PATTERNS = (
@@ -185,6 +186,16 @@ def audit_project(target: Path, warn_lines: int = 300, max_lines: int = 450, sta
             passes.append("Git security & quality hooks (`pre-commit`, `commit-msg`, `pre-push`) present.")
         else:
             warnings.append("Missing `.githooks/` (`pre-commit` / `pre-push`) security & quality gates.")
+
+        tt = det.get("task_tracking")
+        if tt == "ticked-not-initialized":
+            pi = provider_info(profile_provider(det.get("existing_profile")))
+            warnings.append(
+                f"`task-tracking` is ticked but `{pi['config_file']}` is missing: run "
+                + "`" + pi["init_cmd"].format(skill_dir=f"<{pi['skill']} skill dir>") + "`."
+            )
+        elif tt == "configured":
+            passes.append("Task tracking configured (provider config present).")
 
         machine_paths = _machine_specific_harness_paths(target)
         if machine_paths:

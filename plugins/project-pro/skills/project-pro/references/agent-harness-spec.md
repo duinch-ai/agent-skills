@@ -23,7 +23,7 @@ When `project-pro` initializes a repository, it creates a **Single-Source-of-Tru
 │   ├── project-profile.json               # Machine-readable record of ticked options (stack, arch, pattern, refRepo, features)
 │   ├── hooks.json                         # Antigravity runtime PreToolUse hook blocking `--no-verify` & force-push main
 │   └── rules/                             # Scoped progressive-disclosure guardrails
-│       ├── execution-harness.md           # Mandatory 6-Gate loop for ANY coding request (Feature/Bugfix/Refactor)
+│       ├── execution-harness.md           # Coding Standards Checklist (file split, disciplined coding, security, tests)
 │       ├── security-gate.md               # Shift-left OWASP, secret hygiene & safe transport rules
 │       ├── domain-layer.md                # Pure domain invariants & zero-framework rule
 │       ├── data-layer.md                  # DTO/Entity isolation, mappers & error translation
@@ -109,3 +109,13 @@ Deterministic tools catch architectural violations automatically before code rev
 - Scaffold `core/testing` with reusable **In-Memory Fakes** (`FakeUserRepository`, test clock/dispatchers) rather than fragile mockito setups.
 - Add 1 canonical example unit test demonstrating Domain + State Holder/Service testing (`Turbine`, `bloc_test`, `TestStore`, `Vitest`, `pytest`, `go test -race`).
 - Add `.github/workflows/ci.yml` running format check → lint → typecheck → unit & architecture boundary tests on every PR.
+
+### `[ ] task-tracking` — GitHub Project board wiring (default OFF)
+Only for repositories that use a GitHub Project. Stored as `task-tracking` in `selectedFeatures` of `.agents/project-profile.json`.
+- Setup creates `docs/tasks/` (with `.gitkeep`; never a `README.md`, because `project_board.py` treats every `*.md` there as a task spec) and `docs/BACKLOG.md` (table whose rows `| TASK-01 | [#12](url) | ... |` map task to issue). Existing files are never overwritten.
+- Checks that the `task-board` skill is installed (SKILL.md under `~/.agent-skills/plugins`, `~/.claude/skills`, `~/.codex/skills`, `~/.gemini/skills`, `~/.agents/skills`, `~/.claude/plugins`, or `$TASK_BOARD_DIR`); during the transition it falls back to the old `github-project-workflow` name and `$GITHUB_PROJECT_WORKFLOW_DIR`. Prints install help when missing, never installs.
+- Prints the next step `python3 <skill dir>/scripts/project_board.py init --provider github --project <N>` (creates `.agents/task-board.json`; needs the user's project number and the GitHub API, so project-pro does not run it) or, for provider `local`, `init --provider local` (no remote). Provider data lives in the single `TASK_PROVIDERS` table in `tasktracking.py`; `gitlab` is added there once task-board implements it.
+- Adds one `## 6. Task Workflow` line to the generated `AGENTS.md`; with the capability OFF, AGENTS.md mentions no board.
+- `detect` reports `task_tracking`: `off`, `configured` (`.agents/task-board.json` or legacy `.github/project.json` exists) or `ticked-not-initialized`; `audit` emits a WARN (never an error) for the last state.
+- Boundary: project-pro wires setup only; `task-board` owns provider sync, `agent-team` calls it at task lifecycle points.
+- Provider-neutral: profile also stores `taskTracking.provider` (only `github` now); skill name, lookup paths, config file and init command live in one `TASK_PROVIDERS` table in `scripts/tasktracking.py`, so `gitlab`/`local` can be added there without touching wizard, scaffolder, detector or auditor.

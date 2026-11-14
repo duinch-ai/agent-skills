@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 project-pro CLI — Thin modular entrypoint (100% Python 3 Standard Library).
-Subcommands: detect, lookup, init, wizard, map, audit, report, check-commit-msg, agent-guard.
+Subcommands: detect, lookup, init, recommend, wizard, map, audit, report, check-commit-msg, agent-guard.
 """
 
 from __future__ import annotations
@@ -17,9 +17,11 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from agent_guard import run_agent_guard
 from auditor import audit_project, check_commit_message, format_audit_markdown
-from catalog import ARCH_CHOICES, PRODUCT_CATEGORIES, STACK_CATALOG
+from catalog import ARCH_CHOICES, PRESET_CHOICES, PRODUCT_CATEGORIES, STACK_CATALOG
 from detector import detect_project, format_lookup_markdown, generate_codebase_map
-from scaffolder import init_project
+from guided import cmd_recommend
+from init_cmd import run_init
+from tasktracking import DEFAULT_PROVIDER, TASK_PROVIDERS
 from wizard import run_wizard
 
 
@@ -37,28 +39,44 @@ def build_parser() -> argparse.ArgumentParser:
     p_lkp.add_argument("--query", default=None, help="Optional topic to generate GitHub code search queries")
     p_lkp.add_argument("--json", action="store_true", help="Output raw JSON")
 
-    p_init = sub.add_parser("init", help="Initialize multi-agent harness, security hooks, profile & optional directories.")
+    p_init = sub.add_parser("init", help="Initialize agent harness, security hooks, profile & optional directories.")
     p_init.add_argument("--target", default=".", help="Target project directory")
     p_init.add_argument("--category", choices=list(PRODUCT_CATEGORIES.keys()), default=None, help="Product category / purpose")
-    p_init.add_argument("--stack", choices=list(STACK_CATALOG.keys()), required=True)
+    p_init.add_argument("--mode", choices=["expert", "guided"], default="expert",
+                        help="expert (default): you choose --stack etc.; guided: derive them from --answers")
+    p_init.add_argument("--answers", default=None, help="Guided mode: answers JSON file, or `-` for stdin")
+    p_init.add_argument("--stack", choices=list(STACK_CATALOG.keys()), default=None, help="Required in expert mode")
     p_init.add_argument("--arch", choices=[k for k, _ in ARCH_CHOICES], default=None)
     p_init.add_argument("--pattern", default=None, help="Presentation/flow pattern (e.g. mvi, mvvm-udf, tca, bloc, fsd)")
     p_init.add_argument(
         "--features",
         default=None,
-        help="Comma-separated base feature IDs (Rust defaults to the multi-platform CI workflow)",
+        help="Comma-separated base feature IDs, or `all` (every applicable feature); overrides --preset "
+        "(Rust's recommended set adds the multi-platform CI workflow)",
+    )
+    p_init.add_argument(
+        "--preset", choices=list(PRESET_CHOICES), default=None,
+        help="minimal (audit + AGENTS.md only) | recommended (expert default) | all | guided (recommended + "
+        "testing-ci + data-integrity + START_HERE.md + scripts/check.sh; guided-mode default); --features/--agents override it",
     )
     p_init.add_argument("--i18n", action="store_true", help="Enable multi-language i18n architecture preset")
     p_init.add_argument("--locales", default="vi,en", help="Comma-separated locale codes (default: vi,en)")
     p_init.add_argument(
         "--agents",
-        default="agents-root,persistent-memory,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs",
-        help="Comma-separated agent & hook targets ticked by user",
+        default=None,
+        help="Comma-separated agent & hook targets, or `all`; overrides --preset",
     )
     p_init.add_argument("--ref-repo", default=None, help="Override reference GitHub repo (owner/name)")
     p_init.add_argument("--name", default=None, help="Project display name")
     p_init.add_argument("--scaffold-dirs", action="store_true", help="Create canonical layer/module folders")
+    p_init.add_argument("--task-provider", choices=list(TASK_PROVIDERS), default=DEFAULT_PROVIDER, help="Provider for the task-tracking capability")
+    p_init.add_argument("--go-module", default=None, help="Go module path for the depguard boundary config (default: read go.mod)")
     p_init.add_argument("--force", action="store_true", help="Overwrite existing harness files")
+
+    p_rec = sub.add_parser("recommend", help="Guided mode: recommend a stack from plain-language answers.")
+    p_rec.add_argument("--answers", required=True, help="Answers JSON file, or `-` for stdin")
+    p_rec.add_argument("--target", default=".", help="Project directory (existing code takes precedence)")
+    p_rec.add_argument("--json", action="store_true", help="Output raw JSON")
 
     p_wiz = sub.add_parser("wizard", help="Interactive terminal checkbox TUI to configure a project.")
     p_wiz.add_argument("--target", default=".", help="Target project directory")
@@ -87,7 +105,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
 
     if args.cmd == "detect":
         print(json.dumps(detect_project(Path(args.target)), indent=2, ensure_ascii=False))
@@ -102,34 +121,12 @@ def main() -> int:
         return 0
 
     if args.cmd == "init":
-        info = STACK_CATALOG[args.stack]
-        default_features = "solid-dry,typed-errors,di-core,network-storage,ui-nav,arch-lint"
-        if args.stack == "rust":
-            default_features += ",testing-ci"
-        feat_list = [
-            x.strip()
-            for x in (args.features if args.features is not None else default_features).split(",")
-            if x.strip()
-        ]
-        if args.i18n and "i18n" not in feat_list:
-            feat_list.append("i18n")
-        loc_list = [x.strip() for x in (args.locales or "vi,en").split(",") if x.strip()]
-        results = init_project(
-            target=Path(args.target),
-            stack=args.stack,
-            arch=args.arch or info["recommended_arch"],
-            pattern=args.pattern or info["recommended_pattern"],
-            features=feat_list,
-            agents=[x.strip() for x in args.agents.split(",") if x.strip()],
-            ref_repo=args.ref_repo,
-            project_name=args.name,
-            scaffold_dirs=args.scaffold_dirs,
-            force=args.force,
-            locales=loc_list,
-            category=args.category,
-        )
-        print("\n".join(results))
-        return 0
+        if args.mode == "expert" and not args.stack:
+            parser.error("--stack is required in expert mode (or use --mode guided --answers ...)")
+        return run_init(args)
+
+    if args.cmd == "recommend":
+        return cmd_recommend(args.answers, Path(args.target), args.json)
 
     if args.cmd == "wizard":
         return run_wizard(Path(args.target), force=args.force)
@@ -157,6 +154,7 @@ def main() -> int:
         print(f"| **Architecture / Pattern** | `{prof.get('architecture', det['recommended_arch'])}` / `{prof.get('pattern', det['recommended_pattern'])}` |")
         print(f"| **Reference Repo Anchor** | `{prof.get('referenceRepo', det['recommended_ref_repo'] or 'N/A')}` |")
         print(f"| **Agent & Hook Readiness** | `{ok}/{total}` files active |")
+        print(f"| **Task Tracking** | `{det['task_tracking']}` |")
         print(f"| **Audit & Security Gate** | **`{aud['status']}`** (`{len(aud['errors'])}` errors, `{len(aud['warnings'])}` warnings) |\n")
         print(format_audit_markdown(aud))
         return 0

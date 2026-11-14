@@ -11,6 +11,10 @@ import subprocess
 from catalog import STACK_CATALOG, generate_i18n_scaffold_files
 from detector import generate_codebase_map
 import templates as tpl
+import tasktracking
+from boundary import generate_boundary_config
+from safety import CHECK_COMMAND, CHECK_SCRIPT_PATH, render_check_script
+from start_here import render_start_here
 
 
 def init_project(
@@ -26,6 +30,9 @@ def init_project(
     force: bool = False,
     locales: list[str] | None = None,
     category: str | None = None,
+    task_provider: str = tasktracking.DEFAULT_PROVIDER,
+    go_module: str | None = None,
+    preset: str | None = None,
 ) -> list[str]:
     target = target.resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -72,6 +79,9 @@ def init_project(
             dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
         created.append(f"WRITE: {rel_path}")
 
+    guided = preset == "guided"  # START_HERE.md + scripts/check.sh are generated for the guided preset only
+    new_check = guided and (force or not (target / CHECK_SCRIPT_PATH).exists())
+
     profile = {
         "schemaVersion": "1.2.0",
         "generator": "project-pro",
@@ -87,8 +97,10 @@ def init_project(
         "fileLineLimits": {"warn": 300, "fail": 450},
         "selectedFeatures": features,
         "selectedAgentTargets": sorted(agent_set),
-        "commands": info["commands"],
+        "commands": {**info["commands"], "check": CHECK_COMMAND} if new_check else info["commands"],
     }
+    if "task-tracking" in features:
+        profile["taskTracking"] = {"provider": task_provider}
     if "i18n" in features:
         profile["i18n"] = {
             "enabled": True,
@@ -99,7 +111,8 @@ def init_project(
 
     if "agents-root" in agent_set:
         write_safe(".agents/project-profile.json", json.dumps(profile, indent=2, ensure_ascii=False) + "\n")
-        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features, clean_locales if "i18n" in features else None, category))
+        write_safe("AGENTS.md", tpl.render_agents_md(name, info, arch, pattern, chosen_repo, chosen_repo_url, features, clean_locales if "i18n" in features else None, category, task_provider,
+                                                  (target / ".agents/rules/agent-workflow.md").is_file(), guided))
         write_safe(".agents/rules/execution-harness.md", tpl.render_execution_harness_rule(info))
         write_safe(".agents/rules/security-gate.md", tpl.render_security_rule())
         write_safe(".agents/rules/domain-layer.md", tpl.render_domain_rule(info, arch))
@@ -121,7 +134,7 @@ def init_project(
             "CLAUDE.md",
             (
                 f"# {name} — Claude Code Instructions\n\n@AGENTS.md\n\n"
-                "- Follow the 6-Gate coding workflow in `.agents/rules/execution-harness.md`.\n"
+                "- Follow the Coding Standards Checklist in `.agents/rules/execution-harness.md`.\n"
                 "- Enforce `.agents/rules/security-gate.md` (zero hardcoded secrets, <= 450 LOC per file).\n"
                 f"- Reference baseline: `{chosen_repo}` ({chosen_repo_url}).\n"
             ),
@@ -130,7 +143,7 @@ def init_project(
             "GEMINI.md",
             (
                 f"# {name} — Antigravity & Gemini Instructions\n\n@[AGENTS.md](./AGENTS.md)\n\n"
-                "- Execute EVERY coding request through [`.agents/rules/execution-harness.md`](./.agents/rules/execution-harness.md).\n"
+                "- Apply the Coding Standards Checklist in [`.agents/rules/execution-harness.md`](./.agents/rules/execution-harness.md).\n"
                 "- Enforce [`.agents/rules/security-gate.md`](./.agents/rules/security-gate.md) and `.agents/rules/`.\n"
                 f"- Reference baseline: `{chosen_repo}` ({chosen_repo_url}).\n"
             ),
@@ -176,7 +189,7 @@ def init_project(
             ".cursor/rules/00-project-architecture.mdc",
             (
                 "---\n"
-                f"description: Core architecture ({arch} + {pattern}), 6-Gate Execution Harness & Security rules for {name}\n"
+                f"description: Core architecture ({arch} + {pattern}), Coding Standards Checklist & Security rules for {name}\n"
                 "globs:\nalwaysApply: true\n---\n\n"
                 "Strictly follow `AGENTS.md`, `.agents/rules/execution-harness.md`, and `.agents/rules/security-gate.md`.\n"
                 f"- **Stack**: {info['label']} | **Arch**: `{arch}` | **Pattern**: `{pattern}` | **Ref**: `{chosen_repo}`\n"
@@ -204,19 +217,23 @@ def init_project(
                 (dir_path / ".gitkeep").write_text("", encoding="utf-8")
                 created.append(f"MKDIR: {d}/")
 
+    if "arch-lint" in features:
+        created.extend(generate_boundary_config(target, stack, arch, info, go_module))
+
+    if "task-tracking" in features:
+        created.extend(tasktracking.scaffold(target, write_safe, task_provider))
+
+    if guided:
+        write_safe(CHECK_SCRIPT_PATH, render_check_script(info["commands"], skill_script), executable=True)
+        write_safe("START_HERE.md", render_start_here(
+            target, name, info, arch, category, features, sorted(agent_set), (target / CHECK_SCRIPT_PATH).is_file()))
+
     if "persistent-memory" in agent_set:
         write_safe(
             ".agents/memory/lessons.md",
             (
                 f"# {name} — Continuous Learning & Mistake Ledger\n\n"
-                "> Read during Gate 1. Append 2-line prevention rules (`Symptom -> Root Cause & Rule`) whenever a subtle bug or user correction occurs.\n\n"
-            ),
-        )
-        write_safe(
-            ".agents/memory/active-plan.md",
-            (
-                f"# {name} — Active Multi-Step Plan (`planning-with-files`)\n\n"
-                "## Goal\n- _No multi-step task active._\n\n## Planned File Slices\n- [ ] `path/to/file` — responsibility\n"
+                "> Read before starting work. Append 2-line prevention rules (`Symptom -> Root Cause & Rule`) whenever a subtle bug or user correction occurs.\n\n"
             ),
         )
         write_safe(".agents/CODEBASE_MAP.md", generate_codebase_map(target, write_file_out=False))

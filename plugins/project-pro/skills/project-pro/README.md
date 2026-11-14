@@ -1,4 +1,4 @@
-# ⚡ `project-pro` — Interactive Clean Architecture & Multi-Agent Skill
+# ⚡ `project-pro` — Interactive Clean Architecture & Project Standardization Skill
 
 > **Universal Agent Skill (`SKILL.md` Standard)** dành cho **Antigravity, GitHub Copilot, Claude Code, OpenAI Codex, Gemini CLI, Cursor, Windsurf, Cline, Roo Code, DeepSeek, Aider**.
 > Giúp bạn **tích chọn (checkbox) dựng base dự án mới**, **chuẩn hoá dự án có sẵn**, **tra cứu repo mẫu nổi tiếng thay vì tự bịa cấu trúc**, ép chuẩn **Clean Architecture / MVI / MVVM / UDF / SOLID / DRY**, và **khởi tạo đầy đủ hệ sinh thái cho AI Agent** (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.agents/rules/`).
@@ -23,9 +23,9 @@
      - **Web (React / Next / Vue)**: `alan2207/bulletproof-react`, `feature-sliced/documentation`, `antfu/vitesse`
      - **Python / Go / NestJS**: `zhanymkanov/fastapi-best-practices`, `cosmicpython/code`, `evrone/go-clean-template`, `ThreeDotsLabs/wild-workouts-go-ddd-example`, `Sairyss/domain-driven-hexagon`
      - **Rust**: `emilk/egui`, `iced-rs/iced`, `LukeMathWalker/zero-to-production`
-   - Hướng dẫn Rust riêng về ownership/borrowing, typed errors, async/unsafe, Cargo workspace, các target Linux/macOS/Windows/Android/iOS/Wasm/embedded, cùng CI đa nền tảng và chiến lược release theo loại artifact: [`references/stacks-rust.md`](./references/stacks-rust.md).
-3. **6-Gate Execution Harness & Chống phình file cứng (300/450 LOC)**:
-   - Mọi yêu cầu code bất kỳ (Feature mới, Fix bug, Refactor) đều đi qua 6 bước khóa cứng (`execution-harness.md`): Grounding repo mẫu → Kế hoạch tách file (`1 File = 1 Trách nhiệm`, `> 300 dòng = WARN`, `> 450 dòng = FAIL`) → Code Inside-Out / Root-Cause → Test biên với Fakes → Vòng lặp tự sửa lỗi.
+   - Hướng dẫn Rust riêng về ownership/borrowing, typed errors, async/unsafe, Cargo workspace, các target Linux/macOS/Windows/Android/iOS/Wasm/embedded, cùng CI đa nền tảng và chiến lược release theo loại artifact: [`references/stack-rust.md`](./references/stack-rust.md).
+3. **Coding Standards Checklist & Chống phình file cứng (300/450 LOC)**:
+   - Mọi thay đổi code phải thỏa checklist tiêu chuẩn (`execution-harness.md`): tách file (`1 File = 1 Trách nhiệm`, `> 300 dòng = WARN`, `> 450 dòng = FAIL`) → Code Inside-Out / Root-Cause → Bảo mật → Test biên với Fakes. Cách làm việc của agent (grounding, debug 3-strike, review, báo cáo) thuộc skill `agent-team` (`references/working-method.md`).
 4. **4-Shield Security & Multi-Layer Hooks (Trước khi Code, Commit & Push)**:
    - **Quét bảo mật Zero-Dependency**: Tự động bắt lộ API Keys, JWT, Private Keys, DB URI chứa password, chặn commit nhầm `.env` / `*.pem` / `*.keystore`, bắt lỗi SQL Injection nối chuỗi, tắt TLS verify, xung đột merge `<<<<<<<`.
    - **3 Git Hooks tự động kích hoạt (`core.hooksPath = .githooks`)**:
@@ -95,12 +95,12 @@ project-pro/
 ├── SKILL.md                    # Core Skill instructions (Progressive Disclosure)
 ├── install.sh                  # Multi-agent symlink/copy/export installer
 ├── scripts/
-│   └── project_pro.py          # Zero-dep Python 3 CLI: detect, lookup, init, wizard, audit
+│   └── project_pro.py          # Zero-dep Python 3 CLI: detect, lookup, init, recommend, wizard, audit
 └── references/
     ├── clean-arch-and-solid.md # Luật Clean Arch, chống False DRY, SOLID & Conventions
     ├── presentation-patterns.md# MVI vs MVVM vs TCA vs BLoC/Riverpod vs FSD & UDF
     ├── agent-harness-spec.md   # Chuẩn khởi tạo đầy đủ AI Agent Harness & Base Modules
-    ├── stacks-mobile.md        # Gold-standard repos & cấu trúc: Android, KMP, Flutter, iOS
-    ├── stacks-web-backend.md   # Gold-standard repos & cấu trúc: Web, Python, Go, NestJS
-    └── stacks-rust.md          # Rust idioms, cross-platform targets, CI/CD & releases
+    ├── stack-<android|kmp|flutter|ios|web|python|go|nestjs>.md  # Gold-standard repos & cấu trúc theo từng stack
+    ├── stack-rust.md           # Rust idioms, cross-platform targets, CI/CD & releases
+    └── stack-cpp-switch.md     # C++ & Nintendo Switch homebrew
 ```

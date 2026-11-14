@@ -122,8 +122,6 @@ if [ "$ACTION" = "export" ]; then
     printf "\n\n---\n\n"
     cat "$SKILL_ROOT/references/execution-harness.md"
     printf "\n\n---\n\n"
-    cat "$SKILL_ROOT/references/agentic-patterns.md"
-    printf "\n\n---\n\n"
     cat "$SKILL_ROOT/references/security-and-hooks.md"
     printf "\n\n---\n\n"
     cat "$SKILL_ROOT/references/clean-arch-and-solid.md"

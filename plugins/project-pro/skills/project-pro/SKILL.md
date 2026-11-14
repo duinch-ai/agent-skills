@@ -1,19 +1,24 @@
 ---
 name: project-pro
 description: >-
-  Interactive project base architect, 6-Gate task execution harness, Clean Architecture
-  & UDF standardizer, Shift-Left DevSecOps security & Git/Agent hook guard, and
-  reference-repo-first engineering guide across Android, KMP/CMP, Flutter, iOS/Swift,
-  Rust, Web (React/Next.js/Vue/TS), and Backend (Python/FastAPI, Go, Node.js/NestJS).
-  Activate whenever creating/scaffolding a project, standardizing an existing repo
-  with tickable checkbox options, writing/fixing/refactoring ANY feature or bug,
-  enforcing SOLID/DRY and file-length caps, or setting up pre-commit/pre-push security
-  and multi-agent hooks.
+  Project setup and standardization wizard: scaffold or standardize a repository, choose
+  stacks and reference repos (Android, KMP/CMP, Flutter, iOS/Swift, Rust, Web, Python/FastAPI,
+  Go, Node.js/NestJS, C++ Switch), architecture and layer rules (Clean Architecture & UDF),
+  the Coding Standards Checklist (file-size caps, SOLID/DRY, tests), Git/Agent security hooks
+  and the deterministic `audit`, plus generated AGENTS.md/CLAUDE.md/GEMINI.md/ADR/CODEBASE_MAP.
+  Activate when creating or scaffolding a project, standardizing an existing repo with tickable
+  options, choosing stacks or architecture, auditing coding standards, or installing
+  pre-commit/pre-push security hooks. How agents work on a task (grounding, debugging,
+  review, delivery) belongs to the agent-team skill.
 ---
 
-# Project Pro — Interactive Architect, 6-Gate Execution Harness & DevSecOps Guard
+# Project Pro — Interactive Architect, Coding Standards & DevSecOps Guard
 
 Build, standardize, and ship production software using **interactive checkbox blueprints**, **famous open-source reference repositories**, **Clean Architecture + UDF**, **SOLID + pragmatic DRY**, **hard file-size caps**, and a **4-Shield Security & Hook Defense** (`pre-commit`, `commit-msg`, `pre-push`, plus runtime AI Agent anti-bypass hooks).
+
+Boundary: project-pro is the repository's constitution, the WHAT every change must satisfy
+(structure, layer rules, coding standards, security rails enforced by code). HOW an agent works
+(grounding, debugging, review, delivery, lessons) is the `agent-team` skill.
 
 ## Two Operating Modes
 
@@ -21,8 +26,8 @@ Check `<PROJECT_DIR>/.agents/project-profile.json` and `<PROJECT_DIR>/AGENTS.md`
 
 1. **Mode A — Interactive Project Setup / Standardization Wizard** *(New project, unconfigured repo, or user asks to configure/scaffold base options)*:
    - Run `detect` → present **tickable multi-select checkboxes** for Architecture, Flow Pattern + Famous Reference Repo, Base Modules, and AI Agent + Git/Security Hooks → scaffold and persist `.agents/project-profile.json`.
-2. **Mode B — 6-Gate Execution Harness** *(Every arbitrary coding request — Feature, Bugfix, or Refactor — on a configured project)*:
-   - Read the saved profile **without re-asking setup questions** → execute strictly through **Gates 1–6** below → run `audit --fail-on-error` + tests before finishing.
+2. **Mode B — Standards check** *(a configured project; user changes code, audits, or asks what the repo requires)*:
+   - Read the saved profile **without re-asking setup questions**; apply the Coding Standards Checklist below (and `references/execution-harness.md`) and run `audit --fail-on-error` before finishing. Working method (grounding, bugfix rule, review, delivery report): `agent-team` skill, `references/working-method.md`.
 
 ---
 
@@ -37,17 +42,30 @@ python3 "<SKILL_DIR>/scripts/project_pro.py" detect --target "<PROJECT_DIR>"
 # 2. Lookup famous reference repos, patterns & GitHub search queries for a stack
 python3 "<SKILL_DIR>/scripts/project_pro.py" lookup --stack <android|kmp|flutter|ios|web|python|go|nestjs|rust|cpp-switch>
 
-# 3. Initialize multi-agent harness, 6-Gate rules, Git security hooks & runtime agent guards
+# 3. Initialize agent harness, coding standards, Git security hooks & runtime agent guards
 python3 "<SKILL_DIR>/scripts/project_pro.py" init \
   --target "<PROJECT_DIR>" \
   --stack <stack> \
   --arch <clean|modular-clean|vertical-slice|hexagonal|lightweight> \
   --pattern <mvi|mvvm-udf|tca|bloc|riverpod|fsd|query-zustand|service-repo|cqrs> \
-  --features "solid-dry,typed-errors,i18n,di-core,network-storage,ui-nav,arch-lint,testing-ci" \
-  --agents "agents-root,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs,cursor-ide" \
+  [--preset minimal|recommended|all|guided] \
+  [--features "solid-dry,typed-errors,i18n,di-core,network-storage,ui-nav,arch-lint,testing-ci" | --features all] \
+  [--agents "agents-root,persistent-memory,claude-gemini,git-security-hooks,agent-runtime-hooks,adr-docs,cursor-ide" | --agents all] \
   [--category <mobile-app|desktop-app|multiplatform-app|web-app|backend-api|service-worker|cli-tool|library-sdk|embedded-homebrew>] \
   [--i18n] [--locales "vi,en,ja"] \
   [--ref-repo "<owner/repo>"] [--scaffold-dirs] [--force]
+
+# `--preset recommended` (default) = the usual set; `minimal` = solid-dry + agents-root (enough for `audit`);
+# `all` (or `--features all` / `--agents all`) = every choice applicable to the stack. The resolved lists are printed.
+# Explicit --features / --agents override the preset.
+
+# Boundary config (feature `arch-lint`): go writes .golangci.yml (depguard; needs go.mod or --go-module <path>),
+# python writes .importlinter (import-linter contracts). Existing config is never overwritten: a snippet is printed
+# instead. Other stacks print "not yet automated".
+
+# 3b. Guided mode: plain-language answers -> recommendation -> init (see "Choosing a mode")
+python3 "<SKILL_DIR>/scripts/project_pro.py" recommend --answers <answers.json|-> [--target "<PROJECT_DIR>"] [--json]
+python3 "<SKILL_DIR>/scripts/project_pro.py" init --mode guided --answers <answers.json|-> --target "<PROJECT_DIR>"
 
 # 4. Interactive terminal checkbox TUI (when run directly in a shell)
 python3 "<SKILL_DIR>/scripts/project_pro.py" wizard --target "<PROJECT_DIR>"
@@ -64,16 +82,37 @@ python3 "<SKILL_DIR>/scripts/project_pro.py" report --target "<PROJECT_DIR>"
 
 Load reference manuals progressively **only as needed**:
 - **Product Category Taxonomy & Operational Blueprints** → [`references/product-categories.md`](./references/product-categories.md)
-- **6-Gate Task Execution Runbook** (Feature / Bugfix / Refactor) → [`references/execution-harness.md`](./references/execution-harness.md)
-- **Agentic Patterns (`karpathy-skills`, `superpowers`, `gstack`, `ECC`, `planning-with-files`, `caveman`)** → [`references/agentic-patterns.md`](./references/agentic-patterns.md)
+- **Coding Standards Checklist** (file split, disciplined coding, security, tests) → [`references/execution-harness.md`](./references/execution-harness.md)
+- **Agent working method** (grounding, debugging + 3-strike stop, review lens, delivery, lessons) → `agent-team` skill, `references/working-method.md`
 - **Security Gateways, Git Hooks & Runtime Agent Hooks** → [`references/security-and-hooks.md`](./references/security-and-hooks.md)
 - **Clean Arch, SOLID, Pragmatic DRY (AHA) & Anti-God-File Rules** → [`references/clean-arch-and-solid.md`](./references/clean-arch-and-solid.md)
 - **MVI / MVVM / TCA / BLoC / Riverpod / FSD & UDF Contracts** → [`references/presentation-patterns.md`](./references/presentation-patterns.md)
-- **Multi-Agent Harness & Tickable Base Module Specs** → [`references/agent-harness-spec.md`](./references/agent-harness-spec.md)
-- **Mobile Famous Reference Repos (Android, KMP, Flutter, iOS)** → [`references/stacks-mobile.md`](./references/stacks-mobile.md)
-- **Web & Backend Famous Reference Repos (Web, Python, Go, NestJS)** → [`references/stacks-web-backend.md`](./references/stacks-web-backend.md)
-- **Rust Idioms, Platform Targets & CI/CD** → [`references/stacks-rust.md`](./references/stacks-rust.md)
-- **C++ Modern Idioms & Nintendo Switch Homebrew** → [`references/stacks-cpp-switch.md`](./references/stacks-cpp-switch.md)
+- **Agent Harness & Tickable Base Module Specs** → [`references/agent-harness-spec.md`](./references/agent-harness-spec.md)
+- **Stack references** (famous repos, canonical structure, non-negotiables), load only the chosen stack:
+  [`android`](./references/stack-android.md) | [`kmp`](./references/stack-kmp.md) | [`flutter`](./references/stack-flutter.md) | [`ios`](./references/stack-ios.md) | [`web`](./references/stack-web.md) | [`python`](./references/stack-python.md) | [`go`](./references/stack-go.md) | [`nestjs`](./references/stack-nestjs.md)
+- **Rust Idioms, Platform Targets & CI/CD** → [`references/stack-rust.md`](./references/stack-rust.md)
+- **C++ Modern Idioms & Nintendo Switch Homebrew** → [`references/stack-cpp-switch.md`](./references/stack-cpp-switch.md)
+
+---
+
+## Choosing a mode
+
+- **Guided**: the user asks which language/framework to use, describes a product without technical terms, or says they are not a developer (or are from another field).
+- **Expert**: the user names stacks or architectures, or passes explicit options. Use the flow below (Mode A) unchanged.
+
+Guided interview (agents run this in chat): ask at most 6 questions, in the user's language, in plain words, one or two at a time, with examples:
+1. What do you want to build? (`goal`) 2. Where should it run? (`platforms`) 3. Does it need offline use, live updates, many users, several UI languages or heavy processing? (`needs`) 4. Which programming languages do you already know, if any? (`known_languages`) 5. Who will work on it? (`maintainers`). `existing_code` is automatic: an existing supported project in the folder wins.
+
+Write the answers to `answers.json` (only `goal` is required; unknown values are rejected with the allowed list), then:
+
+```bash
+python3 "<SKILL_DIR>/scripts/project_pro.py" recommend --answers answers.json --target "<PROJECT_DIR>" --json
+python3 "<SKILL_DIR>/scripts/project_pro.py" init --mode guided --answers answers.json --target "<PROJECT_DIR>"
+```
+
+Explain the result in plain language: what is recommended, why (`reasons`), what the `alternative` would mean, and every `notes` entry. On confirmation run `init --mode guided` (it uses `--preset guided` = recommended + `testing-ci` + `data-integrity`, and also writes `START_HERE.md` and `scripts/check.sh`; explicit flags such as `--stack` override it and print a notice; if `--agents`/`--features` drop a safety item you get a `WARNING: guided mode normally keeps <x>` line - tell the user in plain words, do not re-add it silently). Then run `sh scripts/check.sh` once in the project, tell the user the result in plain words (passed / what failed and what to ask the agent), and point them to `START_HERE.md`. Finish by saying what was created and how to run it, and that the agent-team skill can continue the work with verification. Expert mode is unchanged: `START_HERE.md` and `check.sh` exist only with `--preset guided` / guided mode.
+
+Honesty: only recommend supported stacks; if the user knows a language project-pro has no stack for (Java, C#, PHP, Ruby) show the `unsupported-language` note instead of hiding it. The rules are project-pro policy defaults (`scripts/recommend_rules.py`), not claims about frameworks; never invent facts about them. If `recommend` returns `need-goal` or `need-language`, ask the user, never guess.
 
 ---
 
@@ -109,6 +148,8 @@ Never guess architecture, product type, or base modules. Run `detect`, then pres
    - `(Recommended) Network Client (Auth/Retry) + Local DB/Storage Repository Base`
    - `(Recommended) Design System Tokens + Type-Safe Navigation (Client) / OpenAPI + Healthchecks (Backend)`
    - `(Recommended) Strict Compiler Flags + Linter/Formatter + Architecture Boundary Tests`
+   - **`[ ] task-tracking`** — task board (default OFF). When ticked, setup asks for a provider (`github` or `local`; `gitlab` is coming), creates `docs/tasks/` and `docs/BACKLOG.md` in the format the `task-board` skill parses, adds one pointer line to AGENTS.md, checks that skill is installed (prints install help if not, never installs it) and prints the `project_board.py init --provider <github|local> [--project <N>]` next step. It does not call any provider API: board sync belongs to `task-board`.
+   - **`[ ] data-integrity`** — optional AGENTS.md rule (default OFF; in `--features all`): never invent numbers, limits, versions, flags or model ids; fixtures recorded from real runs with CLI+version+date; reports state what was actually run and label unverified items.
    - `Testing Harness (Fakes over Mocks + State/Service tests) + GitHub Actions CI (Rust: Linux/macOS/Windows matrix)`
 4. **Q4 — Multi-Language Support / Internationalization (i18n/l10n) & Locales** *(single-select & locale multi-select)*:
    - **Kích hoạt đa ngôn ngữ**:
@@ -136,8 +177,8 @@ Never guess architecture, product type, or base modules. Run `detect`, then pres
      - **Rust (Desktop GUI / Cargo Workspace)**: Centralized type-safe `strings` / `i18n` catalog (`AppLanguage { Vietnamese, English, ... }` enum + `strings::*` module) hoặc `fluent-rs` / `unic-langid`. Nghiêm cấm hardcode raw string literals trong UI views.
      - **C++ / Nintendo Switch Homebrew**: Borealis built-in i18n (`brls::loadTranslations("romfs:/i18n")`), catalogs `resources/romfs/i18n/<lang-TAG>/strings.json`, truy xuất bằng `brls::getStr("key")`.
 5. **Q5 — AI Agent Harness, Persistent Memory, Git Hooks & Security Shields** *(`is_multi_select: true` checkboxes)*:
-   - `(Recommended) Universal Agent & 6-Gate Execution Harness (AGENTS.md + execution-harness.md + security-gate.md + layer rules)`
-   - `(Recommended) Cross-Session Memory & Codebase Map (.agents/CODEBASE_MAP.md + memory/active-plan.md + lessons.md)`
+   - `(Recommended) Universal Agent & Coding Standards (AGENTS.md + execution-harness.md checklist + security-gate.md + layer rules)`
+   - `(Recommended) Cross-Session Memory & Codebase Map (.agents/CODEBASE_MAP.md + memory/lessons.md)`
    - `(Recommended) Claude Code & Antigravity/Gemini Bridges (CLAUDE.md + GEMINI.md)`
    - `(Recommended) Git Security & Quality Hooks (pre-commit secret/boundary scan, commit-msg, pre-push CVE + tests + .gitignore)`
    - `(Recommended) AI Agent Anti-Bypass Runtime Hooks (.agents/hooks.json + .claude/settings.json blocking --no-verify)`
@@ -148,32 +189,18 @@ After user selection: run `project_pro.py init`, consult the chosen famous refer
 
 ---
 
-## Mode B: Mandatory 6-Gate Execution Harness (Every Coding Request)
+## Mode B: Coding Standards Checklist (every code change)
 
-Execute **every** feature, bugfix, or refactor through all 6 Gates (full details in [`references/execution-harness.md`](./references/execution-harness.md)):
+Full details in [`references/execution-harness.md`](./references/execution-harness.md):
 
-1. **Gate 1 — Grounding**: Read `AGENTS.md`, `.agents/project-profile.json`, and neighboring files. Consult the anchored `referenceRepo` (via `references/stacks-*.md` or GitHub/docs search) instead of inventing custom patterns. Ask early if business rules are ambiguous.
-2. **Gate 2 — File-Split Blueprint (Anti-God-File Lock)**:
-   - **1 File = 1 Primary Responsibility** (never bundle `Dto` + `Mapper` + `RepoImpl`, or `UiState` + `ViewModel` + `Screen` + `Sub-components`).
-   - Hard LOC caps on code files: **`> 300 LOC` = `[WARN]`**, **`> 450 LOC` = `[FAIL]`** (blocks `pre-commit` & `audit`; generated files are auto-exempt).
-3. **Gate 3 — Disciplined Coding &SOLID/DRY**:
-   - **Features**: Inside-Out (`Domain` pure entities/ports/`DomainError` → `Data` DTO/Entity/Mappers/RepoImpl → `State Holder` Sealed `UiState` → `Stateless Previewable UI` → `DI/Nav`).
-   - **Bugfixes**: Fix **Root Cause** + add reproduction test (ban blind `try/catch`, arbitrary `delay()`, or unsafe casts).
-   - **Clean Code**: Separate layer models (no False DRY), ban boolean state soup, guard clauses (`<= 3` indent levels), immutable by default, rethrow `CancellationException`/`CancelledError`, zero `// TODO` stubs or dead code.
-4. **Gate 4 — Shift-Left Security**:
-   - Zero hardcoded API keys, tokens, passwords, or `.env`/keystore commits; parameterized SQL/ORM queries only; validate untrusted inputs; redact tokens/PII in logs. **Never run `--no-verify` to bypass Git hooks.**
-5. **Gate 5 — Fast Unit Tests & Self-Healing Verification**:
-   - Cover happy, empty, error/offline, and boundary cases with fast **Fakes**.
-   - Run `Single Test` → `Lint/Typecheck` → `project_pro.py audit --target "<PROJECT_DIR>" --fail-on-error`. Fix every failure before concluding.
-6. **Gate 6 — Clean Delivery**: Summarize changes by layer alongside actual test, lint, and audit results.
+1. **File Split (Anti-God-File Lock)**:
+   - **1 File = 1 Primary Responsibility** (never bundle `Dto` + `Mapper` + `RepoImpl`, or `UiState` + `ViewModel` + `Screen` + sub-components).
+   - Hard LOC caps on code files: **`> 300 LOC` = `[WARN]`**, **`> 450 LOC` = `[FAIL]`** (blocks `pre-commit` & `audit`; generated files are auto-exempt). Touch only the files the task needs.
+2. **Disciplined Coding & SOLID/DRY**:
+   - **Features**: Inside-Out (`Domain` pure entities/ports/`DomainError` -> `Data` DTO/Entity/Mappers/RepoImpl -> `State Holder` sealed `UiState` -> stateless previewable UI -> `DI/Nav`).
+   - **Bugfixes**: fix the root cause and add a regression test (ban blind `try/catch`, arbitrary `delay()`, unsafe casts). The debugging method and 3-strike stop live in agent-team.
+   - **Clean Code**: separate layer models (no False DRY), ban boolean state soup, guard clauses (`<= 3` indent levels), immutable by default, rethrow `CancellationException`/`CancelledError`, zero `// TODO` stubs or dead code.
+3. **Security**: zero hardcoded API keys, tokens, passwords, or `.env`/keystore commits; parameterized SQL/ORM queries only; validate untrusted inputs; redact tokens/PII in logs. **Never run `--no-verify` to bypass Git hooks.**
+4. **Tests**: cover happy, empty, error/offline, and boundary cases with fast **Fakes**; run `Single Test` -> `Lint/Typecheck` -> `project_pro.py audit --target "<PROJECT_DIR>" --fail-on-error` and fix every failure before concluding.
 
----
-
-## Mode C: GitHub Projects & Parallel Sub-Agent Execution Protocol
-
-Scale multi-step development across autonomous sub-agents with GitHub Projects v2 Kanban:
-1. **Board Setup**: `python3 scripts/workflow.py setup [--public|--private]`
-2. **Create Task**: `python3 scripts/workflow.py new "<Title>" --body "<Specs>"` (places in `Todo`)
-3. **Start Task**: `python3 scripts/workflow.py start <issue_id>` (moves to `In Progress`, creates branch `feat/issue-<id>-...`)
-4. **Dispatch Sub-Agent**: `python3 scripts/workflow.py dispatch <issue_id>` (generates token-efficient English prompt for `invoke_subagent`)
-5. **Complete Task**: `python3 scripts/workflow.py done <issue_id>` (verifies 6-Gate audit green, merges, closes issue, moves to `Done`)
+Task board work -> `task-board`; working method and multi-agent / issue-driven team work (lead, coders, cross-vendor review, done gate) -> `agent-team` skill.

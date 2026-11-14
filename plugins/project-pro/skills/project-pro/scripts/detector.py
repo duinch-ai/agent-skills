@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from catalog import IGNORE_DIRS, SOURCE_EXTENSIONS, STACK_CATALOG
+from tasktracking import tracking_state
 
 
 def _any_file_contains(paths: list[Path], needle: str) -> bool:
@@ -88,6 +89,7 @@ def detect_project(target: Path) -> dict[str, Any]:
         "recommended_pattern": stack_info["recommended_pattern"] if stack_info else "mvi",
         "recommended_ref_repo": stack_info["repos"][0]["repo"] if stack_info else None,
         "harness_present": harness_files,
+        "task_tracking": tracking_state(target, existing_profile),
         "existing_profile": existing_profile,
     }
 

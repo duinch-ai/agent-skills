@@ -16,6 +16,8 @@ from catalog import (
 )
 from detector import detect_project
 from scaffolder import init_project
+from tasktracking import DEFAULT_PROVIDER, TASK_PROVIDERS
+from wizard_guided import run_guided
 
 
 def _read_key() -> str:
@@ -68,6 +70,17 @@ def _select_single(title: str, choices: list[tuple[str, str]], default_key: str 
         return choices[int(raw) - 1][0] if raw.isdigit() and 1 <= int(raw) <= len(choices) else choices[idx][0]
 
 
+def parse_multi_input(raw: str, count: int) -> list[int] | None:
+    """Numeric fallback input -> 1-based picks. `a`, `all` and `*` mean every choice; None means "use defaults"."""
+    raw = raw.strip()
+    if not raw:
+        return None
+    parts = [x.strip().lower() for x in raw.split(",") if x.strip()]
+    if any(x in ("a", "all", "*") for x in parts):
+        return list(range(1, count + 1))
+    return sorted({int(x) for x in parts if x.isdigit() and 1 <= int(x) <= count})
+
+
 def _select_multi(title: str, choices: list[tuple[str, str, bool]]) -> list[str]:
     selected = [default for _, _, default in choices]
     idx = 0
@@ -97,16 +110,27 @@ def _select_multi(title: str, choices: list[tuple[str, str, bool]]) -> list[str]
         print(f"\n{title}:")
         for i, (_, label, default) in enumerate(choices, 1):
             print(f"  {i}. {'[x]' if default else '[ ]'} {label}")
-        raw = input("Nhập số cách nhau bởi dấu phẩy (Enter = mặc định): ").strip()
-        if not raw:
+        picked = parse_multi_input(input("Nhập số cách nhau bởi dấu phẩy, 'a'/'all'/'*' = chọn hết (Enter = mặc định): "), len(choices))
+        if picked is None:
             return [choices[i][0] for i, on in enumerate(selected) if on]
-        picked = {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
-        return [choices[i - 1][0] for i in sorted(picked) if 1 <= i <= len(choices)]
+        return [choices[i - 1][0] for i in picked]
 
 
 def run_wizard(target: Path, force: bool = False) -> int:
     det = detect_project(target)
     print(f"=== Project Pro Interactive Wizard ===\nTarget: {det['target']} (Mode: {det['mode']})")
+
+    new_project = det["mode"] != "configured" and not det["detected_stack"]
+    mode = _select_single(
+        "How do you want to set up?",
+        [("guided", "Guided: answer a few questions about your product and project-pro picks the technology for you"),
+         ("expert", "Expert: choose stack, architecture and options yourself")],
+        "guided" if new_project else "expert",
+    )
+    if mode == "guided":
+        code = run_guided(target, det, force, _select_single, _select_multi)
+        if code is not None:
+            return code
 
     existing_profile = det.get("existing_profile") or {}
     default_cat = existing_profile.get("productCategory")
@@ -198,6 +222,12 @@ def run_wizard(target: Path, force: bool = False) -> int:
     elif i18n_choice == "no" and "i18n" in features:
         features.remove("i18n")
 
+    task_provider = DEFAULT_PROVIDER
+    if "task-tracking" in features and len(TASK_PROVIDERS) > 1:
+        task_provider = _select_single(
+            "7b. Chọn provider cho Task Board (gitlab: sắp có)", [(k, v["label"]) for k, v in TASK_PROVIDERS.items()], DEFAULT_PROVIDER
+        )
+
     agents = _select_multi("8. Tick chọn các AI Agent & Security Hooks cần khởi tạo", AGENT_CHOICES)
     scaffold = _select_single(
         "9. Tạo sẵn cây thư mục chuẩn theo kiến trúc?",
@@ -207,7 +237,7 @@ def run_wizard(target: Path, force: bool = False) -> int:
     results = init_project(
         target=target, stack=stack, arch=arch, pattern=pattern, features=features,
         agents=agents, ref_repo=ref_repo, scaffold_dirs=(scaffold == "yes"), force=force,
-        locales=chosen_locales, category=category,
+        locales=chosen_locales, category=category, task_provider=task_provider,
     )
     print("\n=== Hoàn tất khởi tạo Project Pro ===")
     for line in results:

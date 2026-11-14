@@ -1,7 +1,10 @@
 # Overnight and batch runs
 
 1. Prepare tasks during the day; `lint` each. Only tasks with full checks go in the batch.
-2. One worktree per task: `git worktree add ../wt-TASK-n -b agent/TASK-n main`. Cap at
+2. One worktree per task, from the repo root: `git worktree add .worktrees/TASK-n -b agent/TASK-n main`
+   (`.worktrees/` is git-ignored by `init`; remove with `git worktree remove .worktrees/TASK-n`).
+   Tools that do not read .gitignore (IDE indexers, tsc/jest without exclude) may need
+   `.worktrees` excluded. Cap at
    `max_parallel` (3); tasks must touch disjoint files or merge conflicts eat the gain.
 3. Per task run: coder, then `verify`, loop up to 3 rounds, then `review`, then `gate`.
    A shell loop or your agent's own scheduler can drive this; the script only provides

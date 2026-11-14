@@ -31,6 +31,21 @@ def link_agents_md(root):
     return "updated AGENTS.md (working-method line now links .agents/rules/agent-workflow.md)"
 
 
+def ensure_gitignore(root, dirs):
+    """Add each `<dir>/` to .gitignore if missing (idempotent); one message per line added."""
+    gi = root / ".gitignore"
+    text = gi.read_text(encoding="utf-8") if gi.exists() else ""
+    msgs = []
+    for d in dirs:
+        line = d.rstrip("/") + "/"
+        if line not in text.splitlines():
+            text += ("" if text.endswith("\n") or not text else "\n") + line + "\n"
+            msgs.append(f"added {line} to .gitignore")
+    if msgs:
+        gi.write_text(text, encoding="utf-8")
+    return msgs
+
+
 def init(ctx, force=False):
     root = ctx.root
     msgs = []
@@ -42,12 +57,7 @@ def init(ctx, force=False):
         keep = {k: v for k, v in config.DEFAULTS.items()}
         cfg_path.write_text(json.dumps(keep, indent=2) + "\n", encoding="utf-8")
         msgs.append(f"wrote {config.CONFIG_REL}")
-    gi = root / ".gitignore"
-    line = ctx.cfg["runs_dir"].rstrip("/") + "/"
-    text = gi.read_text(encoding="utf-8") if gi.exists() else ""
-    if line not in text.splitlines():
-        gi.write_text(text + ("" if text.endswith("\n") or not text else "\n") + line + "\n", encoding="utf-8")
-        msgs.append(f"added {line} to .gitignore")
+    msgs.extend(ensure_gitignore(root, [ctx.cfg["runs_dir"], ctx.cfg["worktrees_dir"]]))
     dest = root / ".claude" / "agents"
     dest.mkdir(parents=True, exist_ok=True)
     for src in sorted(ASSETS.glob("*.md")):

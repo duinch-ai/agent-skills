@@ -26,6 +26,7 @@ DEFAULTS = {
     "reviewer_preference": ["codex", "agy", "gemini", "claude"],
     "tasks_dir": "docs/tasks",
     "runs_dir": ".agent-team/runs",
+    "worktrees_dir": ".worktrees",
     "check_timeout": 300,
     "review_timeout": 900,
     "max_diff_bytes": 200000,

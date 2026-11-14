@@ -28,6 +28,19 @@ class InitWorkflowTests(unittest.TestCase):
         self.assertNotEqual(wf.read_text(), "custom")
 
 
+class InitGitignoreTests(unittest.TestCase):
+    def test_adds_both_lines_idempotent_keeps_content(self):
+        root = h.make_repo()
+        (root / ".gitignore").write_text("node_modules/")
+        msgs = init_cmd.init(h.ctx_for(root))
+        self.assertIn("added .agent-team/runs/ to .gitignore", msgs)
+        self.assertIn("added .worktrees/ to .gitignore", msgs)
+        self.assertEqual((root / ".gitignore").read_text(), "node_modules/\n.agent-team/runs/\n.worktrees/\n")
+        msgs = init_cmd.init(h.ctx_for(root))
+        self.assertFalse(any("to .gitignore" in m for m in msgs))
+        self.assertEqual((root / ".gitignore").read_text(), "node_modules/\n.agent-team/runs/\n.worktrees/\n")
+
+
 class SuggestChecksTests(unittest.TestCase):
     def profile(self, root, cmds):
         (root / ".agents").mkdir(exist_ok=True)

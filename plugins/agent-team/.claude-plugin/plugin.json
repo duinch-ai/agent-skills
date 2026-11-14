@@ -1,0 +1,10 @@
+{
+  "name": "agent-team",
+  "displayName": "Agent Team — Lead, Coder, Verifier and Cross-Vendor Reviewer",
+  "version": "0.1.0",
+  "description": "Run a team of coding agents the way a small engineering org does: a lead writes tasks with measurable acceptance checks, coders work in isolated worktrees, a verifier runs the real checks, a reviewer from a different vendor judges the diff, and a done-gate decides. Includes overnight batch runs and a morning report.",
+  "author": {
+    "name": "nchungdev"
+  },
+  "keywords": ["agent-team", "multi-agent", "verification", "cross-review", "codex", "worktree", "overnight", "done-gate"]
+}

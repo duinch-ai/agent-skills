@@ -1,11 +1,19 @@
 ---
-name: github-project-workflow
-description: Quản lý vòng đời task và đồng bộ GitHub Project v2 chống cạn kiệt rate-limit: danh sách local zero-API, bộ đệm schema/item-id, tra cứu 1-point và hàng đợi outbox offline. Kèm quy trình 4 bước chuẩn (Tạo task, Do task, Code review gate, Release).
+name: task-board
+description: Quản lý task board, backlog và trạng thái task (task status) theo kiểu local-first với docs/tasks/TASK-*.md và docs/BACKLOG.md; đồng bộ GitHub Projects v2 chống cạn kiệt rate-limit qua provider github, chạy thuần local qua provider local, GitLab boards chưa hỗ trợ (stub). Dùng khi người dùng nhắc task board, backlog, task status, chuyển task sang In Progress/Done, GitHub Projects hoặc GitLab boards. Kèm quy trình 4 bước chuẩn (Tạo task, Do task, Code review gate, Release).
 ---
 
-# GitHub Project Workflow Skill
+# Task Board Skill
 
-Kỹ năng quản lý vòng đời task, đặc tả kỹ thuật (spec-driven development) và đồng bộ trạng thái hai chiều với **GitHub Projects (v2)**, được thiết kế chuyên biệt để **chống cạn kiệt hạn ngạch GitHub API/GraphQL Rate Limit** cho AI Agent và nhà phát triển.
+Kỹ năng quản lý vòng đời task, đặc tả kỹ thuật (spec-driven development) theo kiểu local-first, với lớp **provider** để đồng bộ board từ xa:
+
+| Provider | Trạng thái | Ghi chú |
+|---|---|---|
+| `github` (mặc định) | Hoàn chỉnh | GitHub Projects v2 qua `gh`, thiết kế **chống cạn kiệt Rate Limit** |
+| `local` | Hoàn chỉnh | Không có remote: `list/move/report` chạy trên file Markdown; `push/sync/rate-limit` là no-op có thông báo (0 API call) |
+| `gitlab` | Stub | Báo `GitLab provider not implemented yet`; chưa có lời gọi API nào |
+
+Mã nguồn: `scripts/project_board.py` (CLI) + `scripts/taskboard/` (lõi: config/specs/store/commands; `providers/`: github, local, gitlab).
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -68,19 +76,21 @@ Kỹ năng quản lý vòng đời task, đặc tả kỹ thuật (spec-driven d
 Chạy lệnh khởi tạo ngay tại thư mục gốc của repository:
 
 ```bash
-python3 <skill_dir>/scripts/project_board.py init --project <PROJECT_NUMBER>
+python3 <skill_dir>/scripts/project_board.py init --project <PROJECT_NUMBER>          # provider github (mặc định)
+python3 <skill_dir>/scripts/project_board.py init --provider local                    # không remote
 ```
 
-Script sẽ:
+Script sẽ (provider github):
 - Tự động nhận diện `owner` và `repo` từ `git remote origin`.
 - Tự động truy vấn GraphQL lấy Node ID dạng `PVT_kw...` của GitHub Project #`<PROJECT_NUMBER>`.
-- Ghi cấu hình vào `.github/project.json`.
+- Ghi cấu hình vào `.agents/task-board.json` (có trường `provider`).
 
-### 2. File cấu hình `.github/project.json` mẫu
+### 2. File cấu hình `.agents/task-board.json` mẫu
 Nếu muốn cấu hình thủ công hoặc tùy biến thư mục:
 
 ```json
 {
+  "provider": "github",
   "owner": "your-org-or-username",
   "repo": "your-repo-name",
   "project_number": "1",
@@ -91,7 +101,11 @@ Nếu muốn cấu hình thủ công hoặc tùy biến thư mục:
 }
 ```
 
-> **Thứ tự ưu tiên nạp cấu hình**: CLI flags (`--owner`, `--repo`, `--project`...) > `.github/project.json` / `.agents/project.json` > Biến môi trường (`GH_PROJECT_OWNER`, `GH_PROJECT_REPO`, `GH_PROJECT_NUMBER`, `GH_PROJECT_ID`...) > Tự động dò `git remote`.
+Provider `local`: `{"provider": "local", "tasks_dir": "docs/tasks", "backlog_doc": "docs/BACKLOG.md"}`.
+
+> **Tương thích ngược**: repo cũ chỉ có `.github/project.json` (không có `provider`) vẫn chạy nguyên như cũ và được coi là provider `github`. File tìm theo thứ tự: `.agents/task-board.json` > `.github/project.json` > `.agents/project.json` > `.agents/workflow.json` > `project.json`.
+>
+> **Thứ tự ưu tiên nạp cấu hình** (đúng như code): CLI flags (`--provider`, `--owner`, `--repo`, `--project`...) > Biến môi trường (`TASK_BOARD_PROVIDER`, `GH_PROJECT_OWNER`, `GH_PROJECT_REPO`, `GH_PROJECT_NUMBER`, `GH_PROJECT_ID`...) > file cấu hình > Tự động dò `git remote` (chỉ github).
 
 ---
 
@@ -152,7 +166,7 @@ Nếu muốn cấu hình thủ công hoặc tùy biến thư mục:
 | `python3 <skill_dir>/scripts/project_board.py sync` | Đồng bộ 2 chiều: Xả outbox (Local->Remote) + kéo live Project state (Remote->Local) | Tùy số lượng mutation |
 | `python3 <skill_dir>/scripts/project_board.py report` | Xuất báo cáo Markdown tổng thể: Board, Specs, Quota, Cache & Outbox | **0 điểm** khi cache hit |
 | `python3 <skill_dir>/scripts/project_board.py rate-limit` | Kiểm tra hạn ngạch REST/GraphQL còn lại và độ dài outbox | 0 điểm REST |
-| `python3 <skill_dir>/scripts/project_board.py init --project <N>` | Khởi tạo file cấu hình `.github/project.json` | 1 điểm GraphQL |
+| `python3 <skill_dir>/scripts/project_board.py init --project <N> [--provider github\|local]` | Khởi tạo `.agents/task-board.json` | 1 điểm GraphQL (github) / 0 (local) |
 
 ---
 

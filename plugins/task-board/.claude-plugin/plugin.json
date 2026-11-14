@@ -1,0 +1,20 @@
+{
+  "name": "task-board",
+  "displayName": "Task Board (local-first, GitHub/GitLab adapters)",
+  "version": "2.0.0",
+  "description": "Provider-neutral task board workflow: local-first Markdown specs (docs/tasks), backlog, cache and offline outbox, with pluggable providers. GitHub Projects v2 sync with anti-rate-limit resilience is built in; local mode needs no remote; GitLab boards are a stub for a later release.",
+  "author": {
+    "name": "nchungdev"
+  },
+  "keywords": [
+    "task-board",
+    "backlog",
+    "task-status",
+    "kanban",
+    "github-projects",
+    "gitlab",
+    "rate-limit",
+    "workflow",
+    "spec"
+  ]
+}

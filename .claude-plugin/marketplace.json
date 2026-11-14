@@ -4,7 +4,7 @@
     "name": "nchungdev",
     "url": "https://github.com/nchungdev"
   },
-  "description": "Universal suite of 15 production-grade AI Agent Skills: GitHub Project v2 lifecycle & anti-rate-limit task workflow, FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), hardsub OCR extraction & subtitle synchronization (Hardsub Extractor), and interactive Clean Architecture, 6-Gate execution harness & DevSecOps hook guard (Project Pro).",
+  "description": "Universal suite of 15 production-grade AI Agent Skills: provider-neutral task board (local-first specs, GitHub Projects v2 anti-rate-limit adapter, GitLab-ready), FFmpeg media processing, TMDb catalog & franchise taxonomy, high-performance media ingestion, multi-target cloud/NAS synchronization, AI subtitle translation, distributed infrastructure & homelab operations, multi-conversation progress orchestration, autonomous system optimization & SRE diagnostics, zero-API cinema & series recommendation concierge, truth-seeking film evaluation & cinema auditor (Film Oracle), universal project conventions & skills bootstrapper (Project Bootstrap), hardsub OCR extraction & subtitle synchronization (Hardsub Extractor), and interactive Clean Architecture, coding standards & DevSecOps hook guard (Project Pro).",
   "plugins": [
     {
       "name": "ffmpeg-toolkit",
@@ -230,28 +230,38 @@
       ]
     },
     {
-      "name": "github-project-workflow",
-      "displayName": "GitHub Project Workflow & Rate-Limit Shield",
-      "source": "./plugins/github-project-workflow",
-      "description": "Universal GitHub Project v2 lifecycle and task spec workflow engine with anti-rate-limit resilience: Zero-API local spec listing, persistent schema & item caching, 1-point targeted issue queries, and offline outbox mutation queue.",
-      "version": "1.0.0",
+      "name": "task-board",
+      "displayName": "Task Board (local-first, GitHub/GitLab adapters)",
+      "source": "./plugins/task-board",
+      "description": "Provider-neutral task board workflow: local-first Markdown specs (docs/tasks), backlog, cache and offline outbox, with pluggable providers. GitHub Projects v2 sync with anti-rate-limit resilience is built in; local mode needs no remote; GitLab boards are a stub for a later release.",
+      "version": "2.0.0",
       "license": "MIT",
       "keywords": [
-        "github",
-        "project",
+        "task-board",
+        "backlog",
+        "task-status",
         "kanban",
+        "github-projects",
+        "gitlab",
         "rate-limit",
         "workflow",
-        "tasks",
-        "spec",
-        "graphql"
+        "spec"
       ]
+    },
+    {
+      "name": "agent-team",
+      "displayName": "Agent Team — Lead, Coder, Verifier and Cross-Vendor Reviewer",
+      "source": "./plugins/agent-team",
+      "description": "Run a team of coding agents the way a small engineering org does: a lead writes tasks with measurable acceptance checks, coders work in isolated worktrees, a verifier runs the real checks, a reviewer from a different vendor judges the diff, and a done-gate decides. Includes overnight batch runs and a morning report.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "keywords": ["agent-team", "multi-agent", "verification", "cross-review", "codex", "worktree", "overnight", "done-gate"]
     },
     {
       "name": "project-pro",
       "displayName": "Project Pro — Clean Architecture, Reference Repos & Multi-Agent Architect",
       "source": "./plugins/project-pro",
-      "description": "Interactive checkbox project base architect, 6-Gate task execution harness, Clean Architecture / MVI / MVVM / TCA / BLoC / FSD standardizer, SOLID & pragmatic DRY enforcer, famous reference-repo lookup, zero-dependency secret/OWASP scanner, and Git/AI runtime hook guard across Android, KMP, Flutter, iOS, Web, Python, Go, and NestJS.",
+      "description": "Interactive checkbox project base architect, Coding Standards checklist, Clean Architecture / MVI / MVVM / TCA / BLoC / FSD standardizer, SOLID & pragmatic DRY enforcer, famous reference-repo lookup, zero-dependency secret/OWASP scanner, and Git/AI runtime hook guard across Android, KMP, Flutter, iOS, Web, Python, Go, and NestJS.",
       "version": "1.0.0",
       "license": "MIT",
       "keywords": [

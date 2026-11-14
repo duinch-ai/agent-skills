@@ -24,7 +24,7 @@
 
 ## 🏛️ Skills Catalog (16 Consolidated Skills)
 
-The catalog features **16 production-ready Agent Skills**, consolidated into a clean, non-overlapping suite:
+The catalog features **17 production-ready Agent Skills**, consolidated into a clean, non-overlapping suite:
 
 | # | Skill | Superpower & Description | Core Stack / Tooling |
 |:---:|---|---|---|
@@ -40,10 +40,11 @@ The catalog features **16 production-ready Agent Skills**, consolidated into a c
 | 10 | **`film-oracle`** | Truth-seeking cinema auditor & honest film evaluation engine: Multi-source synthesis across Rotten Tomatoes, Metacritic, YouTube/Blog reviewers, and audience pulse to answer 7 critical questions for any film: Worth watching or skip, critic consensus, reviewer takeaways, audience reception, polarizing flaws, buzz lifecycle timing, and demographic matchmaking. | Multi-Source Scraping, RT/Metacritic Consensus, Reviewer Pulse, Lifecycle Timing |
 | 11 | **`project-bootstrap`** | Universal AI project scaffolding and cross-agent orchestrator: Generates tailored `AGENTS.md` conventions, scaffolds project-specific skills (`.agents/skills/`), and links them via zero-drift relative symlinks across Claude Code (`CLAUDE.md`), Gemini CLI (`GEMINI.md`), OpenAI Codex (`CODEX.md`), Cursor (`.cursorrules`), and Windsurf (`.windsurfrules`). | Repo Inspection, Single Source of Truth, Cross-Agent Symlinks, Python 3 Stdlib |
 | 12 | **`hardsub-extractor`** | Autonomous video hardsub extraction and OCR alignment engine: Uses FFmpeg memory streaming and Gemini Multimodal Vision API to extract high-accuracy Vietnamese subtitles with exact timecodes and exports clean .vi.OCR.srt files. | FFmpeg Memory Streaming, Gemini 3.5 Flash Lite Vision, Timecode Snapping, Spanning Deduplication |
-| 13 | **`github-project-workflow`** | Universal GitHub Project v2 lifecycle & task spec workflow engine with anti-rate-limit resilience: Zero-API local spec listing, persistent schema & item caching, 1-point targeted issue queries, offline outbox mutation queue, and unified Markdown status reporting. | GitHub Projects v2, GraphQL, REST Issues, Local-First Spec |
-| 14 | **`project-pro`** | Interactive project base architect, 6-Gate task execution harness, Clean Architecture & UDF standardizer (MVI, MVVM, TCA, BLoC, Riverpod, FSD, Hexagonal), SOLID & pragmatic DRY enforcer, famous open-source reference-repo lookup, persistent cross-session codebase map (`.agents/CODEBASE_MAP.md`), zero-dependency secret/OWASP scanner, and Git/AI runtime anti-bypass hooks (`pre-commit`, `commit-msg`, `pre-push`, `PreToolUse`). | Python 3 Stdlib, Clean Arch, 8 Tech Stacks, Secret/OWASP Scanner, Git & Agent Hooks |
+| 13 | **`task-board`** | Provider-neutral task board: local-first Markdown specs, backlog, cache & offline outbox, with adapters. GitHub Projects v2 (anti-rate-limit: zero-API listing, schema/item caching, 1-point lookups, outbox), `local` (no remote) and a GitLab stub. | GitHub Projects v2, GraphQL, REST Issues, Local-First Spec |
+| 14 | **`project-pro`** | Interactive project base architect, Coding Standards checklist, Clean Architecture & UDF standardizer (MVI, MVVM, TCA, BLoC, Riverpod, FSD, Hexagonal), SOLID & pragmatic DRY enforcer, famous open-source reference-repo lookup, persistent cross-session codebase map (`.agents/CODEBASE_MAP.md`), zero-dependency secret/OWASP scanner, and Git/AI runtime anti-bypass hooks (`pre-commit`, `commit-msg`, `pre-push`, `PreToolUse`). | Python 3 Stdlib, Clean Arch, 8 Tech Stacks, Secret/OWASP Scanner, Git & Agent Hooks |
 | 15 | **`dailylog`** | Long-term memory shared by every agent: automatic session records through hooks at zero model tokens, daily logs, project state, durable knowledge, decision records and a weekly history, with diacritic-insensitive search and secret refusal. | Python 3 Stdlib, Claude Code / Codex / Antigravity Hooks, Markdown |
 | 16 | **`cache-idle-guard`** | Universal idle session & prompt cache expiration shield: Monitors session idle time and intercepts user messages when prompt cache expires (Anthropic Claude 5m, Google Gemini 5m/60m), prompting users to run `/compact` or `/clear` to preserve 90% cache read discounts, evade API rate limits, and maintain context hygiene. | Python 3 Stdlib, Claude Code / Antigravity / Codex Hooks, Prompt Cache Shield |
+| 17 | **`agent-team`** | Coding agent team: lead writes task specs with `check:` acceptance commands (a bug repro must fail first), coders in isolated worktrees, a verifier runs the real checks, a cross-vendor reviewer judges the diff, a done-gate decides; overnight batches and a morning report. | Python 3 Stdlib, Task Specs, Verify Harness, Cross-Vendor Review |
 
 ---
 
@@ -107,7 +108,7 @@ cd ~/.agent-skills
 /plugin marketplace add nchungdev/agent-skills
 
 # Install individual plugins as needed
-/plugin install github-project-workflow@nchungdev-skills
+/plugin install task-board@nchungdev-skills
 /plugin install system-doctor@nchungdev-skills
 /plugin install tmdb-catalog@nchungdev-skills
 /plugin install media-downloader@nchungdev-skills
@@ -122,7 +123,7 @@ To attach specific skills directly to a standalone project:
 
 ```bash
 mkdir -p .agent/skills
-ln -s ~/.agent-skills/plugins/github-project-workflow/skills/github-project-workflow .agent/skills/
+ln -s ~/.agent-skills/plugins/task-board/skills/task-board .agent/skills/
 ```
 
 ---
@@ -137,8 +138,9 @@ agent-skills/
 ├── plugins/
 │   ├── cache-idle-guard/           # Universal idle session & prompt cache expiration shield
 │   ├── dailylog/                   # Long-term memory shared by every agent
-│   ├── project-pro/                # Interactive Clean Arch, 6-Gate harness & DevSecOps hooks
-│   ├── github-project-workflow/    # GitHub Project v2 lifecycle, spec workflow & rate-limit shield
+│   ├── project-pro/                # Interactive Clean Arch, coding standards & DevSecOps hooks
+│   ├── task-board/                 # Task board: local specs + GitHub/local/GitLab providers
+│   ├── agent-team/                 # Coding agent team: task specs, verify, cross-vendor review, done-gate
 │   ├── project-bootstrap/          # Cross-agent project bootstrapper & AGENTS.md conventions
 │   ├── hardsub-extractor/          # Video hardsub OCR & subtitle synchronizer via Gemini Vision
 │   ├── ffmpeg-toolkit/             # Muxed sub extractor, VAD aligner, WebVTT converter

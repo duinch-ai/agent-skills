@@ -76,16 +76,25 @@ reviewer prompt (`review.py`) carries the same list.
    wrote to disk. State what you could not verify.
 3. No filler narration ("let me read the file"). Act, then report.
 
-## 6. Lessons protocol
+## 6. Lessons protocol (rung ladder)
 
-Append to `.agents/memory/lessons.md` (the repo's ledger; created by project-pro) when
-something non-obvious happened: an SDK pitfall, a build quirk, or a correction from the
-user. Format: two lines, `Symptom -> Root cause and prevention rule`. Read the file during
-grounding so the same mistake is not repeated.
+On **any** user correction, screenshot bug report, or non-obvious failure, encode the fix at
+the **strongest deterministic rung** immediately on the first occurrence (do not default to
+prose rules):
 
-"Fix the system": when the same failure kind appears in two tasks or two rounds, write the
-rule to `lessons.md` and propose a task for the systemic fix (a lint rule, a type, a test
-helper). Do not create a new memory location.
+1. `type` — make invalid state unrepresentable or ban the unsafe API in types/signatures.
+2. `lint` — lint rule, dependency-boundary rule, or escape-hatch check with a root-cause message.
+3. `check` — regression test, ratchet check, or `verify` script command.
+4. `helper` — shared helper or codemod/lever that makes the right way the easy way.
+5. `prose` — `.agents/memory/lessons.md` only when judgment is genuinely required (include a concrete bad/good example).
+
+Always record the lesson in `.agents/memory/lessons.md` with `rung: type|lint|check|helper|prose`
+and why a stronger rung was not chosen (`Component [rung: ...]: Symptom -> Root cause & fix`).
+If the immediate systemic fix is too large for the current task, file a follow-up task.
+
+**No-progress + discard rule:** during verify loops, make the smallest change per round;
+discard edits that do not improve the result, and stop as `blocked` if 2 consecutive rounds
+make zero progress (same or fewer passing checks) instead of loosening checks.
 
 ## 7. Token economy
 

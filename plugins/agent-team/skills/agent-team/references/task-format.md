@@ -13,6 +13,8 @@ Type: bug
 Untrusted: no
 Base: main
 Coder: claude
+Artifacts: required
+Risk: low
 
 ## Goal
 Users land on /home after login.
@@ -30,14 +32,23 @@ check: `npx playwright test e2e/login.spec.ts -g redirect`
 `Type: bug` or a `## Repro` section makes the gate require proof the bug failed first
 (`verify --repro-before`). `Base:` overrides the config base branch for the diff. The lead/coder writes `Coder: <vendor>` when
 coding starts; `review` excludes that vendor's family (`--coder` overrides only when the task has none).
+`Artifacts: required` (or a path/glob like `.agent-team/runs/TASK-01/artifacts/*.png`) makes `gate` require at least one non-empty evidence file. `Risk: low` tags low-risk tasks eligible for `auto_merge_tier: "low-risk"`.
 A `check:` is run by `sh -c` in the worktree with credential-looking environment variables
 removed, and has `check_timeout` seconds (default 300).
+
+## Throughput checkpoint (Plan step)
+
+Before spawning parallel coders, record 4 items in the plan (or `n/a: <reason>`):
+1. Blocking first steps
+2. Independent workstreams
+3. Shared mutable state
+4. Smallest safe decomposition
 
 ## Run files `.agent-team/runs/TASK-n/`
 
 - `repro-<k>.json`: `reproduced`, result, `head`, `dirty`.
 - `verify-<k>.json`: `ok`, per-criterion `results` (cmd, exit, seconds, output tail), `head`.
-- `review-<k>.json`: vendor, coder, coder_family, reviewer_family, verdict, findings, tautological_tests, summary, `head`.
+- `review-<k>.json`: mode (`same-vendor`|`cross-vendor`), reviewer (same-vendor), vendor, coder, coder_family, reviewer_family, verdict, findings, tautological_tests, summary, `head`.
 - `review-invalid-<k>.json`: a reply that failed validation (kept for debugging).
 
 ## Morning report

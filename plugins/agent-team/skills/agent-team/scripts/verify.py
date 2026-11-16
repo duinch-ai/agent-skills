@@ -59,6 +59,17 @@ def verify_task(ctx, task, cwd, repro_before=False):
         r = run_check(c["check"], cwd, t, tail)
         r["criterion"] = c["id"]
         results.append(r)
+    escape_policy = cfg.get("escape_hatch_policy", "warn")
+    escape_hits = []
+    if escape_policy != "off" and cfg.get("require_git", True):
+        diff = safety.git_diff_for_scan(cwd, task.base or cfg.get("base_branch", "main"))
+        escape_hits = safety.scan_escape_hatches(diff)
+        if escape_hits and escape_policy == "fail":
+            summary = "\n".join(f"{h['file']} [{h['rule']}]: {h['line']}" for h in escape_hits[:10])
+            results.append({"criterion": "ESCAPE_HATCH", "cmd": "escape-hatch-scanner",
+                            "ok": False, "exit": 1, "timed_out": False, "seconds": 0,
+                            "output_tail": safety.tail(summary, tail)})
     ok = bool(results) and all(r["ok"] for r in results)
-    path = store.write(d, "verify", {"ok": ok, "results": results, **meta})
-    return {"ok": ok, "path": path, "results": results, "label": "verify"}
+    path = store.write(d, "verify", {"ok": ok, "results": results,
+                                     "escape_hatches": escape_hits, **meta})
+    return {"ok": ok, "path": path, "results": results, "escape_hatches": escape_hits, "label": "verify"}

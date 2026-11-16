@@ -1,5 +1,6 @@
 """Morning report and status table."""
 import re
+import subprocess
 import time
 
 import store
@@ -39,7 +40,23 @@ def collect(ctx, since_seconds=None):
     return rows
 
 
-def render(rows, title="Agent team report"):
+def _git_revert_stats(root):
+    """Return (reverts, total) across recent commits on root, or (0, 0) if unavailable."""
+    try:
+        tot = subprocess.run(["git", "-C", str(root), "rev-list", "--count", "-n", "100", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        if tot.returncode != 0 or not tot.stdout.strip().isdigit():
+            return 0, 0
+        total = int(tot.stdout.strip())
+        rev = subprocess.run(["git", "-C", str(root), "log", "-n", "100", "--grep=^Revert", "--oneline"],
+                             capture_output=True, text=True, timeout=10)
+        reverts = len([ln for ln in (rev.stdout or "").splitlines() if ln.strip()]) if rev.returncode == 0 else 0
+        return reverts, total
+    except (OSError, subprocess.SubprocessError):
+        return 0, 0
+
+
+def render(rows, title="Agent team report", root=None):
     out = [f"# {title}", ""]
     if not rows:
         return "\n".join(out + ["No task activity in this window."]) + "\n"
@@ -52,6 +69,22 @@ def render(rows, title="Agent team report"):
     for r in rows:
         note = r["why"] + (f"; {r['tauto']} tautological test(s)" if r["tauto"] else "")
         out.append(f"| {r['id']} {r['title']} | {r['state']} | {r['verify']} | {r['review']} | {r['reviewer']} | {note} |")
+    ver_counts = [r["verify"] for r in rows if r["verify"] > 0]
+    rev_counts = [r["review"] for r in rows if r["review"] > 0]
+    avg_ver = round(sum(ver_counts) / len(ver_counts), 2) if ver_counts else 0
+    avg_rev = round(sum(rev_counts) / len(rev_counts), 2) if rev_counts else 0
+    first_pass = sum(1 for r in rows if r["state"] == "ready-to-merge" and r["verify"] == 1 and r["review"] == 1)
+    ready_n = sum(1 for r in rows if r["state"] == "ready-to-merge")
+    health = [
+        f"- avg verify rounds: {avg_ver}, avg review rounds: {avg_rev}",
+        f"- first-pass ready: {first_pass}/{ready_n}" if ready_n else "- first-pass ready: 0/0",
+    ]
+    if root is not None:
+        reverts, total = _git_revert_stats(root)
+        if total:
+            pct = round(100 * reverts / total, 1)
+            health.append(f"- recent reverts: {reverts}/{total} ({pct}%)")
+    out += ["", "## Inner-loop health"] + health
     blocked = [r for r in rows if r["state"] == "blocked"]
     if blocked:
         out += ["", "## Needs a human decision"] + [f"- {r['id']}: {r['why']}" for r in blocked]

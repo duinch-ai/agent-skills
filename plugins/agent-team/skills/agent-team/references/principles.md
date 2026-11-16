@@ -1,32 +1,26 @@
 # Principles (and why)
 
-Source: public write-ups of Lauren Tan's agent workflow (secondary sources, so treat the
-specifics as inspiration, not quotation).
+Source: Lauren Tan (`@poteto`, "Slop into gold" talk and `poteto/plugins` `pstack` + `poteto/verification-skill-example`).
 
-- **Hierarchy, not a swarm.** A lead owns planning and acceptance; engineer agents own
-  execution. Flat swarms duplicate work and nobody owns the outcome.
-- **Outer loop pulls context** (issues, chat) into task specs; **inner loop** is execute,
-  verify, fix, re-verify. Keep them separate so untrusted input is filtered at the seam.
-- **Verification is the core.** Agents run the real product (browser via Playwright/CDP,
-  CLI, API) against measurable criteria. Without it, "done" is a guess.
-- **Hill climbing.** Change, run, compare to the last result, keep or refine. Needs a
-  number or pass/fail, so define one first.
-- **Reproduce before fixing.** A bug that does not fail on latest main may already be
-  fixed or misunderstood; the fix then proves nothing.
-- **Tautological tests.** Agents write tests that pass by construction (mock the unit,
-  assert the constant). Humans and the reviewer judge what a test could catch.
+- **Trust is the goal, not raw volume.** High PR throughput only works when the agent environment makes good code the default.
+- **Inverted pyramid of agent environment.** Invest from bottom (strongest) to top (thinnest):
+  1. Code, API design, and architecture (make invalid states unrepresentable; ban nuance-heavy APIs; enforce directory/module boundaries with dependency rules).
+  2. Deterministic static checks (types, linters with root-cause error messages, tests, ratchets).
+  3. Runtime & formal verification (custom driver CLIs, user-POV feature maps, property-based / formal checks; ~70% of tokens go to verification).
+  4. Prose (`AGENTS.md`, rules, skills) is the **thinnest** layer. "The instruction IS the symptom."
+- **Codebase is the largest input.** Agents copy existing patterns—good or bad. Keep the codebase clean: add a lint rule to block new bad patterns, then clean up old ones.
+- **Encode every correction in structure.** On any correction, pick the strongest rung (type -> lint -> check -> helper -> prose). Never just add another rule line when a deterministic check can enforce it.
+- **Review verification artifacts, not every line.** Shift human review from reading every diff line to inspecting proof artifacts (screenshots, videos, diagrams, test/lint outputs).
+- **Inner loop before outer loop.** Automating a slop loop just produces more slop. Measure first-pass rate and revert rate before enabling unattended batches or tiered auto-merge.
 - **Different model family judges.** Self-review repeats the same blind spots.
-- **Agent-friendly code.** One feature per directory, small files, lint and static rules
-  turn conventions into failures an agent can see.
-- **Skills encode process**: when to verify, what the next step's criteria are.
-- **Sweepers.** Background read-only agents log findings for later triage.
-- **Overnight work, morning review** of the commit log and report.
-- **Fix the system.** Repeated shortcut across agents means missing tooling, not a bad run.
+- **Sweepers.** Background read-only agents run legacy pattern censuses and log system-fix tasks.
 
 ## Anti-patterns
 
 - Criteria like "works well" with no command. Rewrite until a command can fail.
+- Adding a prose rule instead of a lint/type/test check when an agent slips up.
+- Escape hatches & workaround comments (`eslint-disable`, `@ts-ignore`, `as any`, `setTimeout(..., 0)` + prose excuses) instead of fixing the root cause.
 - Same vendor writes and reviews.
 - Coder edits the check to make it pass (review diffs of test and check files first).
 - Letting an issue's text run with edit rights unreviewed.
-- Auto-merge or auto-deploy: one-way doors stay human.
+- Unbounded auto-merge without proven inner-loop metrics (only opt in for `Risk: low` when revert rate is low and deterministic + artifact gates pass).

@@ -73,6 +73,7 @@ class CoderTests(unittest.TestCase):
         root = h.make_repo(CODER_TASK)
         ctx = h.ctx_for(root)
         ctx.cfg["base_branch"] = "main"
+        ctx.cfg["review_mode"] = "cross-vendor"
         t = tasks.load_task(ctx, "TASK-01")
         d = ctx.runs("TASK-01")
         head = store.head_info(root)

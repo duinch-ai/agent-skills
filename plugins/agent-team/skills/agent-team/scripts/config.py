@@ -18,7 +18,26 @@ from pathlib import Path
 
 CONFIG_REL = ".agent-team/config.json"
 
+REVIEW_MODES = ("same-vendor", "cross-vendor")
+PROFILES = ("dev", "research", "content", "ops", "general")
+ESCAPE_HATCH_POLICIES = ("off", "warn", "fail")
+AUTO_MERGE_TIERS = ("off", "low-risk")
+PROFILE_PRESETS = {
+    "dev": {"profile": "dev", "workspace_mode": "git-worktree", "require_git": True, "run_audit": True},
+    "research": {"profile": "research", "workspace_mode": "dir", "require_git": False, "run_audit": False},
+    "content": {"profile": "content", "workspace_mode": "dir", "require_git": False, "run_audit": False},
+    "ops": {"profile": "ops", "workspace_mode": "dir", "require_git": False, "run_audit": False},
+    "general": {"profile": "general", "workspace_mode": "dir", "require_git": False, "run_audit": False},
+}
+
 DEFAULTS = {
+    # same-vendor: reviewer is a fresh-context read-only subagent of the lead's own vendor (default).
+    # cross-vendor: reviewer is a CLI from another vendor (codex, ...); see references/cross-review.md.
+    "review_mode": "same-vendor",
+    "profile": "dev",
+    "workspace_mode": "git-worktree",
+    "require_git": True,
+    "run_audit": True,
     "base_branch": "main",
     "max_verify_rounds": 3,
     "max_review_rounds": 2,
@@ -31,6 +50,8 @@ DEFAULTS = {
     "review_timeout": 900,
     "max_diff_bytes": 200000,
     "output_tail_chars": 4000,
+    "escape_hatch_policy": "warn",
+    "auto_merge_tier": "off",
     # vendor -> argv list; prompt is piped on stdin, reply must be JSON on stdout.
     # Antigravity (agy) usually runs Gemini models; override to e.g. {"agy": "claude"} if yours differs.
     "vendor_family": {"agy": "gemini"},
@@ -59,6 +80,18 @@ def load_config(root):
             cfg.update(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError) as exc:
             raise SystemExit(f"invalid {path}: {exc}")
+    if cfg["review_mode"] not in REVIEW_MODES:
+        raise SystemExit(f"invalid review_mode {cfg['review_mode']!r} in {path}; "
+                         f"allowed: {', '.join(REVIEW_MODES)}")
+    if cfg["profile"] not in PROFILES:
+        raise SystemExit(f"invalid profile {cfg['profile']!r} in {path}; "
+                         f"allowed: {', '.join(PROFILES)}")
+    if cfg["escape_hatch_policy"] not in ESCAPE_HATCH_POLICIES:
+        raise SystemExit(f"invalid escape_hatch_policy {cfg['escape_hatch_policy']!r} in {path}; "
+                         f"allowed: {', '.join(ESCAPE_HATCH_POLICIES)}")
+    if cfg["auto_merge_tier"] not in AUTO_MERGE_TIERS:
+        raise SystemExit(f"invalid auto_merge_tier {cfg['auto_merge_tier']!r} in {path}; "
+                         f"allowed: {', '.join(AUTO_MERGE_TIERS)}")
     return cfg
 
 

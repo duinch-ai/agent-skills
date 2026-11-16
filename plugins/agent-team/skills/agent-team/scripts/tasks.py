@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 HEADER = re.compile(r"^#\s+([A-Z][A-Z0-9]*-\d+)\s*[—–:-]*\s*(.*)$")
-META = re.compile(r"^(Status|Priority|Untrusted|Type|Base|Coder):\s*(.+?)\s*$")
+META = re.compile(r"^(Status|Priority|Untrusted|Type|Base|Coder|Artifacts|Risk):\s*(.+?)\s*$")
 CHECK = re.compile(r"^\s*(?:[-*]\s*)?check:\s*`?(.+?)`?\s*$")
 BULLET = re.compile(r"^\s*[-*]\s*(?:\[[ xX]\]\s*)?(.+?)\s*$")
 
@@ -44,6 +44,14 @@ class Task:
     @property
     def coder(self):
         return (self.meta.get("Coder") or "").strip().lower() or None
+
+    @property
+    def artifacts(self):
+        return (self.meta.get("Artifacts") or "").strip() or None
+
+    @property
+    def risk(self):
+        return (self.meta.get("Risk") or "").strip().lower() or None
 
 
 def parse_task(path):

@@ -17,3 +17,9 @@
    branch. Merging is yours.
 7. Safe defaults for unattended runs: no network writes, no pushes to protected branches,
    no deploys, no messages sent. Sweepers stay read-only.
+
+## Inner-loop readiness & tiered auto-merge
+
+- **No-progress + discard:** during verify loops, discard edits that do not improve the check count and stop as `blocked` after 2 consecutive no-progress rounds.
+- **Measure before automating:** check `agent_team.py report` for high first-pass rate and low revert rate before running unattended batches.
+- **Tiered auto-merge (opt-in):** default is `auto_merge_tier: "off"` (human approves merges). When `auto_merge_tier: "low-risk"` is explicitly set in `.agent-team/config.json`, tasks tagged `Risk: low` that pass `gate` (green HEAD verify, approving review, zero high findings, required artifacts present, clean `escape_hatch_policy`) may be auto-merged; high-risk, architectural, or `Untrusted: yes` tasks always require human approval.

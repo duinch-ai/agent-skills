@@ -1,5 +1,8 @@
 # Cross-vendor review
 
+Applies only when `review_mode` is `cross-vendor` in `.agent-team/config.json`. The default
+`same-vendor` mode uses the `reviewer` subagent instead (`review --prompt`, then `review --record FILE`).
+
 ## Selection rule
 
 `review.available_reviewers`: walk `reviewer_preference`, skip every vendor in the coder's

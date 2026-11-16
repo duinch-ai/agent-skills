@@ -137,6 +137,7 @@ class GateTests(unittest.TestCase):
         root = h.make_repo()
         ctx = h.ctx_for(root)
         ctx.cfg["base_branch"] = "main"
+        ctx.cfg["review_mode"] = "cross-vendor"
         t = tasks.load_task(ctx, "TASK-01")
         ok, reasons, _ = gate.evaluate(ctx, t, root, run_audit=False)
         self.assertFalse(ok)

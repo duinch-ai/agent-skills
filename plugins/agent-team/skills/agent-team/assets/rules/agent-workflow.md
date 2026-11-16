@@ -34,6 +34,8 @@
   transaction.
 - Trust boundaries: IDOR or missing ownership check, unvalidated input, secrets or PII in
   logs.
+- Sibling parity: new variants or components follow the same conventions, contract, and
+  styling as existing siblings.
 
 ## Verify and deliver
 1. Single test, then lint/typecheck, then full tests, then the repo audit if it exists
@@ -41,10 +43,11 @@
 2. Report tersely: what changed, why, real verification output, what was not verified.
 3. No filler narration.
 
-## Lessons
-Non-obvious pitfall or user correction: append two lines to `.agents/memory/lessons.md`
-(`Symptom -> Root cause and prevention rule`). The same failure in two tasks: add a task for
-a systemic fix (lint rule, type, helper).
+## Lessons (rung ladder)
+On **any** user correction, screenshot bug report, or non-obvious pitfall, pick the strongest
+deterministic rung immediately: `type` -> `lint` -> `check` -> `helper` -> `prose` (fallback
+only). Log `Component [rung: ...]: Symptom -> Root cause & fix` in `.agents/memory/lessons.md`
+with why a stronger rung was not used. If the systemic fix is too large now, file a follow-up task.
 
 ## Roles (team runs)
 - lead: turns requests into task specs with checks; plans disjoint subtasks.

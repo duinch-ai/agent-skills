@@ -1,16 +1,16 @@
 ---
 name: agent-team
 description: >-
-  Run a team of coding agents on a repository the way a small engineering org does:
-  a lead turns requests into tasks with measurable acceptance checks, coders work in
-  isolated git worktrees, a verifier runs the real checks, a reviewer from a DIFFERENT
-  vendor (codex, gemini, claude) judges the diff, and a done-gate decides before merge.
-  Use for "agent team", "đội agent", delegating issues to several agents, lead/coder/reviewer
-  setups, overnight or background coding batches with a morning report, cross-vendor review
-  ("review bằng codex/gemini"), acceptance criteria plus verify loops, a done gate before
-  merge, or a Lauren Tan-style workflow. Do not use for a single quick edit, repo
-  scaffolding or coding standards (project-pro), or board-only operations
-  (task-board).
+  Run an agent team (lead, workers, verifier, fresh-context reviewer, done-gate) across
+  dev repos (isolated git worktrees) or non-dev profiles (research, content, ops, general),
+  with same-vendor review by default or optional cross-vendor CLI review (codex, gemini,
+  claude). Use as the default workflow for implementing features ("triển khai...", "thêm
+  tính năng...", "làm..."), refactoring, non-trivial bug fixes, executing or continuing a
+  plan ("tiếp tục plan", "hoàn thành các việc trong plan", "triển khai plan"), delegating
+  tasks to agents, overnight/background batches, or enforcing acceptance checks and a
+  done-gate ("agent team", "đội agent", "review bằng codex/gemini"). Do not use for trivial
+  1-line/typo tweaks, pure Q&A, repo scaffolding or coding standards (project-pro), or
+  board-only operations (task-board).
 ---
 
 # Agent Team
@@ -24,8 +24,9 @@ this file.
 
 - Verification is the core. An agent saying "done" proves nothing; a `check:` command
   exiting 0 does. So every task carries checks before any code is written.
-- A model reviewing its own vendor's output shares its blind spots. The reviewer must
-  come from a different vendor than the coder.
+- A model reviewing its own context shares its blind spots. The default reviewer is a
+  fresh-context read-only subagent (ideally a different model than the coder); optionally
+  it can be a different vendor (`review_mode: "cross-vendor"`).
 - Agents do not chat with each other. They hand off through the task file and run
   artifacts, which keeps work traceable and prevents loops.
 - When several agents repeat the same flawed shortcut, fix the system (lint rule, type,
@@ -36,13 +37,13 @@ Details: `references/principles.md`.
 ## Setup (once per repo)
 
 ```bash
-python3 "<SKILL_DIR>/scripts/agent_team.py" init
+python3 "<SKILL_DIR>/scripts/agent_team.py" init [--profile dev|research|content|ops|general]
 ```
 
-Writes `.agent-team/config.json`, ignores `.agent-team/runs/` and `.worktrees/`, installs the `verifier`
-and `sweeper` subagents into `.claude/agents/`, writes `.agents/rules/agent-workflow.md`
+Writes `.agent-team/config.json` (with `--profile`: `dev` uses git worktrees + `git diff` + `project-pro` audit; `research`/`content`/`ops`/`general` use directory workspaces without requiring Git or `project-pro`), ignores `.agent-team/runs/` (and `.worktrees/` for `dev`), installs the `verifier`,
+`sweeper` and `reviewer` subagents into `.agents/agents/` (symlinking `.claude/agents/`, `.codex/agents/`, `.gemini/agents/`, `.agy/agents/` to them), writes `.agents/rules/agent-workflow.md`
 (the concise working method, derived from `references/working-method.md`; never overwrites
-anything without `--force`), and prints which reviewer CLIs exist here. Config keys: base branch, round limits (3 verify,
+anything without `--force`), and prints which reviewer CLIs exist here. Config keys: base branch, `review_mode` (`same-vendor` default, or `cross-vendor`), round limits (3 verify,
 2 review), `max_parallel` (3), `reviewer_preference`, `vendor_family` (agy counts as gemini), `tasks_dir`, `worktrees_dir` (`.worktrees`).
 
 ## Workflow
@@ -57,7 +58,7 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    read-only, and get the human to approve the plan before any editing run.
 2. **Plan.** Split into subtasks touching disjoint files. One git worktree (`.worktrees/TASK-n`) and branch per
    subtask, at most `max_parallel` at once.
-3. **Code (coder).** The lead writes `Coder: <vendor>` in the task when assigning it. A coding subagent (for example `implementer`) works inside its
+3. **Code (coder).** The lead writes `Coder: <vendor>` in the task when assigning it (required only when `review_mode` is `cross-vendor`). A coding subagent (for example `implementer`) works inside its
    worktree and follows `references/working-method.md` (grounding, small change, debugging
    method, review lens). Repo facts and coding standards come from the repo's `AGENTS.md`.
 4. **Verify.** For bugs first run `agent_team.py verify TASK-n --repro-before` on main
@@ -65,26 +66,29 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    `agent_team.py verify TASK-n --cwd <worktree>` runs every check and stores evidence in
    `.agent-team/runs/TASK-n/verify-<k>.json`. The `verifier` subagent turns failures into
    a short note for the coder. Three red rounds mean `blocked`: stop and ask a human.
-5. **Review (different vendor).** `agent_team.py review TASK-n --cwd <worktree>`
-   takes the coder from the task's `Coder:` field (or `--coder VENDOR`; no coder known means
-   the command stops), picks an available reviewer outside the coder's vendor family, sends criteria plus the
-   diff over stdin in a read-only sandbox, and validates a JSON verdict
-   (`references/cross-review.md`). Two rounds max. If no other vendor is available the
-   command fails: do not fall back to the coder's own vendor.
+5. **Review.** Default `review_mode: "same-vendor"`: the lead runs
+   `agent_team.py review TASK-n --cwd <worktree> --prompt`, gives that output to the
+   `reviewer` subagent in a fresh context (ideally a different model than the coder), saves
+   its JSON reply to a file and runs
+   `agent_team.py review TASK-n --cwd <worktree> --record FILE --reviewer <name>`, which
+   validates and stores the verdict. Two rounds max. Setting `review_mode: "cross-vendor"`
+   switches to the CLI reviewer from another vendor (see `references/cross-review.md`).
 6. **Gate.** `agent_team.py gate TASK-n --cwd <worktree>` passes only when the tree is
    committed, the latest verify is green on HEAD, the latest review approves on HEAD, no
-   high-severity finding remains, bugs were shown failing first, and
+   high-severity finding remains, required `Artifacts:` exist (for UI/visual tasks), escape-hatch
+   checks pass (under `escape_hatch_policy`), bugs were shown failing first, and
    `project_pro.py audit --fail-on-error` is green when project-pro is configured (skipped
    with a warning otherwise).
-7. **Deliver.** Open a PR with `gh` or leave the branch. When `.agents/task-board.json`
-   (or the legacy `.github/project.json`) exists, move the card with `task-board`
-   (`project_board.py move TASK-n "Done"`; works for any provider, including `local`); do not reimplement board sync. Merge, deploy,
-   delete and sending messages are one-way doors: the human approves them.
+7. **Deliver.** Open a PR with `gh` or leave the branch; keep the worktree while the PR/MR is open so review feedback can be fixed there, and remove it after the PR/MR is merged (`git worktree remove .worktrees/TASK-n`). When `.agents/task-board.json`
+   (or the legacy `.github/project.json`) exists and `task-board` is installed, `gate` automatically runs `project_board.py move TASK-n "Done"` on pass; do not reimplement board sync. Merge, deploy,
+   delete and sending messages are one-way doors: the human approves them (unless `auto_merge_tier: "low-risk"` is explicitly enabled for `Risk: low` tasks with a healthy inner loop; see `references/overnight.md`).
 8. **Report.** `agent_team.py report --since 24h` gives the morning view: state per task,
-   rounds used, reviewer, blocked reasons. `status` is the one-line version.
-9. **Fix the system.** If the same failure kind shows up in two tasks or two rounds,
-   append the rule to `.agents/memory/lessons.md` (protocol in `working-method.md`) and
-   write a new task for the systemic fix (lint rule, type, test helper, skill text).
+   rounds used, reviewer, inner-loop health (avg rounds, first-pass rate, revert rate), and blocked reasons. `status` is the one-line version.
+9. **Fix the system (rung ladder).** On **any** user correction, screenshot bug report, or non-obvious
+   failure, encode the fix at the strongest deterministic rung immediately on the first occurrence
+   (`type` -> `lint`/banned API -> `check`/test -> `helper` -> `prose` only as fallback; protocol in
+   `references/working-method.md`). Record the chosen rung in `.agents/memory/lessons.md`. If
+   an immediate systemic fix is too large for the current task, file a follow-up task and note why.
 
 ## Rules and their reasons
 
@@ -111,8 +115,8 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
 ## Commands
 
 ```
-agent_team.py init [--force]
-agent_team.py lint|verify|review|gate TASK-n [--cwd DIR]   (verify: --repro-before; review: --coder VENDOR, default the task's Coder:; gate: --no-audit)
+agent_team.py init [--force] [--profile dev|research|content|ops|general] [--verify-skill]
+agent_team.py lint|verify|review|gate TASK-n [--cwd DIR]   (verify: --repro-before; review: same-vendor --prompt | --record FILE [--reviewer NAME], cross-vendor --coder VENDOR, default the task's Coder:; gate: --no-audit)
 agent_team.py report [--since 24h|7d]
 agent_team.py status
 ```

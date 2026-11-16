@@ -29,3 +29,17 @@ test, have no assertion, or assert constants.
 
 Save screenshots/logs under `.agent-team/runs/TASK-n/artifacts/` (git-ignored); never
 write secrets or real user data into them.
+
+## Project verification skill + feature map (`init --verify-skill`)
+
+For non-trivial apps, scaffold `.agents/skills/verify-app/` with `agent_team.py init --verify-skill`:
+- **Doctor preflight:** check runtime, build freshness, and fixtures before driving flows.
+- **Custom driver CLI:** wrap repetitive UI/API steps into a deterministic, token-cheap CLI.
+- **Proof bar:** exercise the real user path (no stale builds), inspect state only to confirm side effects, and save evidence (`screenshot`/`video`/`log`) to `.agent-team/runs/TASK-n/artifacts/` when `Artifacts:` is set.
+- **Feature map (`references/features/*.md`):** 4 sections per feature: `Sub-features`, `How to get to it (user POV)`, `Driving it with <cli>`, `Gotchas`.
+
+## Ratchet checks & formal/PBT
+
+- **Ratchet check:** add a `check:` that fails if occurrences of a legacy/banned pattern exceed the baseline (e.g., `test "$(rg -c 'legacyApi' src | awk -F: '{s+=$2}END{print s+0}')" -le 12`), blocking new slop while cleaning old code.
+- **Repo standards (`project-pro`):** keep banned-API rules, directory import boundaries, and root-cause lint messages in `project-pro` so `gate` enforces them across all tasks.
+- **Formal / PBT:** for concurrency or state-machine invariants, reference TLA+, Lean, or property-based UI testing (e.g., Bombadil) in a `check:` command when applicable.

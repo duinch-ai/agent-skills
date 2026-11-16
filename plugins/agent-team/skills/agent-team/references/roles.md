@@ -5,7 +5,7 @@
 | lead | read-only until plan approved | strongest reasoning model available | task specs, subtask split |
 | coder | edit, in its own worktree | fast coding model | commits on a branch |
 | verifier | read-only (runs checks) | cheaper model is fine | failure note per round |
-| reviewer | read-only sandbox, different vendor | any strong model not from coder's vendor | JSON verdict |
+| reviewer | read-only; default same-vendor fresh-context `reviewer` subagent, cross-vendor CLI optional | default: same vendor, ideally a different model than the coder; cross-vendor: any model outside coder's vendor | JSON verdict |
 | sweeper | read-only | cheap model | proposed tasks in `.agent-team/sweeps/` |
 
 Model names change; pick from what the machine has (`codex exec --help`, your own CLI's

@@ -51,6 +51,22 @@ def get_limit_seconds() -> float:
     return minutes * 60.0
 
 
+def get_user_prompt(payload: dict) -> str:
+    for key in ("lastUserInput", "prompt", "userInput", "message"):
+        val = payload.get(key)
+        if isinstance(val, str):
+            return val.strip()
+    return ""
+
+
+def is_bypass_command(payload: dict) -> bool:
+    prompt = get_user_prompt(payload)
+    if not prompt:
+        return False
+    first_token = prompt.split(None, 1)[0].lower()
+    return first_token in ("/compact", "/clear")
+
+
 def cmd_stamp(payload: dict, is_agy: bool):
     sid = get_session_id(payload)
     state_file = get_state_dir() / sid
@@ -78,7 +94,7 @@ def cmd_check(payload: dict, is_agy: bool):
         except Exception:
             idle = 0.0
 
-    if idle > limit:
+    if idle > limit and not is_bypass_command(payload):
         mins = int(idle // 60)
         limit_mins = int(limit // 60)
         reason = (

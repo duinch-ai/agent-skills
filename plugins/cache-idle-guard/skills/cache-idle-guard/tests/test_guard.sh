@@ -40,7 +40,44 @@ echo "[OK] Antigravity tests passed!"
 rm -f ~/.cache-idle-guard/state/test-claude ~/.cache-idle-guard/state/test-agy
 
 echo ""
-echo "=== 3. Test Status ==="
+echo "=== 3. Test /compact & /clear Bypass ==="
+echo '{"session_id":"test-claude-compact"}' | python3 "$PYTHON_SCRIPT" stamp
+sleep 1
+OUT_CLAUDE_COMPACT=$(echo '{"session_id":"test-claude-compact","prompt":"/compact"}' | CACHE_IDLE_MINUTES=0 python3 "$PYTHON_SCRIPT" check)
+if [[ -n "$OUT_CLAUDE_COMPACT" ]]; then
+  echo "LỖI: Claude Code /compact không được bỏ qua! Output: $OUT_CLAUDE_COMPACT"
+  exit 1
+fi
+
+echo '{"conversationId":"test-agy-compact"}' | python3 "$PYTHON_SCRIPT" stamp
+sleep 1
+OUT_AGY_COMPACT=$(echo '{"conversationId":"test-agy-compact","lastUserInput":"/compact keep context"}' | CACHE_IDLE_MINUTES=0 python3 "$PYTHON_SCRIPT" check)
+if [[ "$OUT_AGY_COMPACT" != "{}" ]]; then
+  echo "LỖI: AGY /compact không được bỏ qua! Output: $OUT_AGY_COMPACT"
+  exit 1
+fi
+
+echo '{"conversationId":"test-agy-clear"}' | python3 "$PYTHON_SCRIPT" stamp
+sleep 1
+OUT_AGY_CLEAR=$(echo '{"conversationId":"test-agy-clear","lastUserInput":"/clear"}' | CACHE_IDLE_MINUTES=0 python3 "$PYTHON_SCRIPT" check)
+if [[ "$OUT_AGY_CLEAR" != "{}" ]]; then
+  echo "LỖI: AGY /clear không được bỏ qua! Output: $OUT_AGY_CLEAR"
+  exit 1
+fi
+
+echo '{"conversationId":"test-agy-noncompact"}' | python3 "$PYTHON_SCRIPT" stamp
+sleep 1
+OUT_AGY_NONCOMPACT=$(echo '{"conversationId":"test-agy-noncompact","lastUserInput":"/compact-other"}' | CACHE_IDLE_MINUTES=0 python3 "$PYTHON_SCRIPT" check)
+if [[ "$OUT_AGY_NONCOMPACT" != *"terminationBehavior\": \"terminate"* ]]; then
+  echo "LỖI: AGY /compact-other phải bị chặn nhưng lại ra: $OUT_AGY_NONCOMPACT"
+  exit 1
+fi
+echo "[OK] /compact & /clear bypass tests passed!"
+
+rm -f ~/.cache-idle-guard/state/test-claude-compact ~/.cache-idle-guard/state/test-agy-compact ~/.cache-idle-guard/state/test-agy-clear ~/.cache-idle-guard/state/test-agy-noncompact
+
+echo ""
+echo "=== 4. Test Status ==="
 python3 "$PYTHON_SCRIPT" status
 
 echo ""

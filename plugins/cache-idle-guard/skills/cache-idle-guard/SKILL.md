@@ -18,7 +18,7 @@ When a session idles past the TTL, subsequent user prompts trigger full context 
 `cache-idle-guard` intercepts user prompts at the lifecycle hook level **before tokens are transmitted**:
 1. Checks elapsed time since the previous agent response (Stop hook).
 2. If idle duration exceeds `CACHE_IDLE_MINUTES` (default: 60m, or 5m for strict cache matching), it blocks the prompt once with an informative message.
-3. Guides the user to run `/compact` (preserve task flow with compressed context) or `/clear` (start fresh).
+3. Guides the user to run `/compact` (preserve task flow with compressed context) or `/clear` (start fresh). If the resume message itself is `/compact` or `/clear`, it passes through immediately without blocking.
 4. If the user decides to proceed anyway, sending the exact same message again passes through immediately (single-interception policy).
 
 ## Quick Start

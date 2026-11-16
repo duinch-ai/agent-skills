@@ -223,6 +223,9 @@ def init_project(
     if "task-tracking" in features:
         created.extend(tasktracking.scaffold(target, write_safe, task_provider))
 
+    if "agents-root" in agent_set:
+        created.extend(tasktracking.check_agent_team(target))
+
     if guided:
         write_safe(CHECK_SCRIPT_PATH, render_check_script(info["commands"], skill_script), executable=True)
         write_safe("START_HERE.md", render_start_here(

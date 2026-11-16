@@ -12,8 +12,8 @@ from pathlib import Path
 
 DEFAULT_PROVIDER = "github"
 _SKILL_SUBDIRS = [".agent-skills/plugins/{skill}/skills/{skill}", ".claude/skills/{skill}",
-                  ".codex/skills/{skill}", ".gemini/skills/{skill}", ".agents/skills/{skill}",
-                  ".copilot/skills/{skill}"]
+                  ".codex/skills/{skill}", ".gemini/skills/{skill}", ".gemini/config/skills/{skill}",
+                  ".agents/skills/{skill}", ".copilot/skills/{skill}"]
 _PLUGIN_GLOBS = [".claude/plugins/*/{skill}/skills/{skill}", ".claude/plugins/*/*/{skill}/skills/{skill}"]
 _COMMON = {
     "skill": "task-board",
@@ -96,6 +96,40 @@ def find_skill(provider: str | None = None) -> tuple[Path | None, bool]:
 
 def find_skill_dir(provider: str | None = None) -> Path | None:
     return find_skill(provider)[0]
+
+
+def find_named_skill(skill: str, env_var: str | None = None) -> Path | None:
+    """Locate an installed skill directory by name across standard agent skill roots."""
+    home = Path.home()
+    cands: list[Path] = []
+    if env_var and os.environ.get(env_var):
+        cands.append(Path(os.environ[env_var]))
+    cands.extend(home / sub.format(skill=skill) for sub in _SKILL_SUBDIRS)
+    for pat in _PLUGIN_GLOBS:
+        cands.extend(sorted(home.glob(pat.format(skill=skill))))
+    for d in cands:
+        if (d / "SKILL.md").is_file():
+            return d
+    return None
+
+
+def check_agent_team(target: Path) -> list[str]:
+    """Check whether the optional agent-team skill is installed and print install/init guidance."""
+    skill_dir = find_named_skill("agent-team", env_var="AGENT_TEAM_DIR")
+    if skill_dir is None:
+        return [
+            "NOTE: skill `agent-team` not found (optional, for multi-agent workflow & review). "
+            "Install it (never auto-installed): copy or symlink its folder to "
+            "~/.claude/skills/agent-team (or ~/.gemini/config/skills/agent-team), "
+            "then run `python3 <agent-team skill dir>/scripts/agent_team.py init`."
+        ]
+    if (target / ".agent-team/config.json").is_file():
+        return [f"OK: `agent-team` found at {skill_dir} (.agent-team/config.json configured)"]
+    return [
+        f"OK: `agent-team` found at {skill_dir}",
+        f"NEXT: python3 {skill_dir}/scripts/agent_team.py init   "
+        "(optional: initializes .agent-team/config.json and .agents/agents/)",
+    ]
 
 
 def scaffold(target: Path, write_safe, provider: str | None = None) -> list[str]:

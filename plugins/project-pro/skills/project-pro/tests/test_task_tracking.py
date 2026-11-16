@@ -76,6 +76,16 @@ class TaskTrackingTests(unittest.TestCase):
         self.assertTrue(any(line.startswith("OK:") for line in out))
         self.assertTrue(any(str(d) in line and "NEXT:" in line for line in out))
 
+    def test_agent_team_hint_when_missing_and_detected(self):
+        out_missing = init(self.root, BASE)
+        self.assertTrue(any("skill `agent-team` not found" in line for line in out_missing))
+        d = self.home / ".gemini/config/skills/agent-team"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text("x")
+        out_found = init(self.root, BASE)
+        self.assertTrue(any(f"OK: `agent-team` found at {d}" == line for line in out_found))
+        self.assertTrue(any("agent_team.py init" in line and "NEXT:" in line for line in out_found))
+
     def test_detector_and_audit_states(self):
         init(self.root, BASE + ["task-tracking"])
         self.assertEqual(detect_project(self.root)["task_tracking"], "ticked-not-initialized")

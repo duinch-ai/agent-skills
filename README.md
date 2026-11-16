@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills Standard](https://img.shields.io/badge/Standard-Agent%20Skills-brightgreen.svg)](https://agentskills.org)
 [![Compatible With](https://img.shields.io/badge/Compatible%20With-Claude%20Code%20|%20Antigravity%20|%20Gemini%20|%20Codex%20|%20Cursor-orange.svg)](#-platform-compatibility)
-[![Total Skills](https://img.shields.io/badge/Skills%20Catalog-16%20Production%20Skills-purple.svg)](#-skills-catalog)
+[![Total Skills](https://img.shields.io/badge/Skills%20Catalog-17%20Production%20Skills-purple.svg)](#-skills-catalog)
 
-> **A curated, production-grade monorepo of 16 modular AI Agent Skills & Plugins crafted by [@nchungdev](https://github.com/nchungdev).**  
+> **A curated, production-grade monorepo of 17 modular AI Agent Skills & Plugins crafted by [@nchungdev](https://github.com/nchungdev).**  
 > Built strictly on the open **Agent Skills Standard (`SKILL.md`)**, ready to install, distribute, and execute across any AI coding assistant or autonomous runtime: **Claude Code, Google Antigravity / Gemini CLI, OpenAI Codex, Cursor, Windsurf**, and custom agent frameworks.
 
 ---
@@ -22,7 +22,7 @@
 
 ---
 
-## 🏛️ Skills Catalog (16 Consolidated Skills)
+## 🏛️ Skills Catalog (17 Consolidated Skills)
 
 The catalog features **17 production-ready Agent Skills**, consolidated into a clean, non-overlapping suite:
 
@@ -45,6 +45,7 @@ The catalog features **17 production-ready Agent Skills**, consolidated into a c
 | 15 | **`dailylog`** | Long-term memory shared by every agent: automatic session records through hooks at zero model tokens, daily logs, project state, durable knowledge, decision records and a weekly history, with diacritic-insensitive search and secret refusal. | Python 3 Stdlib, Claude Code / Codex / Antigravity Hooks, Markdown |
 | 16 | **`cache-idle-guard`** | Universal idle session & prompt cache expiration shield: Monitors session idle time and intercepts user messages when prompt cache expires (Anthropic Claude 5m, Google Gemini 5m/60m), prompting users to run `/compact` or `/clear` to preserve 90% cache read discounts, evade API rate limits, and maintain context hygiene. | Python 3 Stdlib, Claude Code / Antigravity / Codex Hooks, Prompt Cache Shield |
 | 17 | **`agent-team`** | Coding agent team: lead writes task specs with `check:` acceptance commands (a bug repro must fail first), coders in isolated worktrees, a verifier runs the real checks, a cross-vendor reviewer judges the diff, a done-gate decides; overnight batches and a morning report. | Python 3 Stdlib, Task Specs, Verify Harness, Cross-Vendor Review |
+| 18 | **`crashlytics`** | Firebase Crashlytics triage through the console, not the quota-starved public API: stateless, the project comes from the current app repo or any Crashlytics link; dump issues and stack traces per version, triage crashes and ANRs, and add notes, close or mute issues after confirmation. | Node 22 Stdlib, Chrome DevTools Protocol, Firebase Console |
 
 ---
 
@@ -133,9 +134,10 @@ ln -s ~/.agent-skills/plugins/task-board/skills/task-board .agent/skills/
 ```
 agent-skills/
 ├── .claude-plugin/
-│   └── marketplace.json            # Claude Code Marketplace Manifest (16 plugins)
+│   └── marketplace.json            # Claude Code Marketplace Manifest (17 plugins)
 ├── install.sh                      # Universal multi-agent installation script
 ├── plugins/
+│   ├── crashlytics/                # Firebase Crashlytics triage through the console
 │   ├── cache-idle-guard/           # Universal idle session & prompt cache expiration shield
 │   ├── dailylog/                   # Long-term memory shared by every agent
 │   ├── project-pro/                # Interactive Clean Arch, coding standards & DevSecOps hooks

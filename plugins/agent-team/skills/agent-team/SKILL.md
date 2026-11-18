@@ -82,7 +82,7 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
 7. **Deliver.** Open a PR with `gh` or leave the branch; keep the worktree while the PR/MR is open so review feedback can be fixed there, and remove it after the PR/MR is merged (`git worktree remove .worktrees/TASK-n`). When `.agents/task-board.json`
    (or the legacy `.github/project.json`) exists and `task-board` is installed, `gate` automatically runs `project_board.py move TASK-n "Done"` on pass; do not reimplement board sync. Merge, deploy,
    delete and sending messages are one-way doors: the human approves them (unless `auto_merge_tier: "low-risk"` is explicitly enabled for `Risk: low` tasks with a healthy inner loop; see `references/overnight.md`).
-   Whenever a task is done, report overall plan progress in the update (e.g., `done 5/10, in progress 3/10, remaining 2/10` or `blocked`, from `agent_team.py status` or the plan's task list).
+   Whenever a task finishes or you update the user during parallel execution, use the **Progress update format** below instead of prose paragraphs.
 8. **Report.** `agent_team.py report --since 24h` gives the morning view: state per task,
    rounds used, reviewer, inner-loop health (avg rounds, first-pass rate, revert rate), and blocked reasons. `status` is the one-line version.
 9. **Fix the system (rung ladder).** On **any** user correction, screenshot bug report, or non-obvious
@@ -90,6 +90,22 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    (`type` -> `lint`/banned API -> `check`/test -> `helper` -> `prose` only as fallback; protocol in
    `references/working-method.md`). Record the chosen rung in `.agents/memory/lessons.md`. If
    an immediate systemic fix is too large for the current task, file a follow-up task and note why.
+
+### Progress update format (chat / parallel runs)
+
+When multiple tasks or subagents are active, or whenever a task finishes, output **at most 1 short lead-in line** (if needed) plus this compact status block — never a prose paragraph listing who is waiting on whom:
+
+```markdown
+**Plan Progress:** Done `5/10` · Active `3/10` · Remaining `2/10` (Blocked `0`)
+
+| Task | Phase | Round | Active Agent / Note |
+| :--- | :--- | :--- | :--- |
+| `TASK-104` | ✅ Done | r2 | Merged to `main` |
+| `TASK-110` | 🔍 Review | r2 | `Reviewer TASK-110 Round 2` |
+| `TASK-100` | 🧪 Verify | r1 | `verify` running after fixes |
+```
+
+Phases: `📝 Intake`, `🛠 Code`, `🧪 Verify`, `🔍 Review`, `🚦 Gate`, `✅ Done`, `⛔ Blocked`. Keep `Active Agent / Note` to one short cell.
 
 ## Rules and their reasons
 

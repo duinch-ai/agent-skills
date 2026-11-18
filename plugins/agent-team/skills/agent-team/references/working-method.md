@@ -73,8 +73,9 @@ reviewer prompt (`review.py`) carries the same list.
    lines. Never claim done while one of them fails.
 2. Report tersely: what changed (grouped by layer or file), why, and the verification
    result with the real command output. Link files; do not paste large code you already
-   wrote to disk. State what you could not verify. When working on a multi-task plan,
-   include overall plan progress (e.g., `done 5/10, in progress 3/10, remaining 2/10`).
+   wrote to disk. State what you could not verify. When working on a multi-task plan or
+   waiting on parallel subagents, render a compact `**Plan Progress:** Done X/N · Active Y/N · Remaining Z/N`
+   header + `Task | Phase | Round | Active Agent / Note` table instead of prose status walls.
 3. No filler narration ("let me read the file"). Act, then report.
 
 ## 6. Lessons protocol (rung ladder)

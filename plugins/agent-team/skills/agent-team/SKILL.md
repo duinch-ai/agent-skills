@@ -91,12 +91,12 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
    `references/working-method.md`). Record the chosen rung in `.agents/memory/lessons.md`. If
    an immediate systemic fix is too large for the current task, file a follow-up task and note why.
 
-### Progress update format (live dashboard + chat)
+### Progress update format (EVERY turn during execution)
 
-Combine a **live in-place dashboard** with **compact chat tables**:
+Whenever you end a turn during a multi-task / subagent run — **including every intermediate turn waiting on a background `verify` command or `Coder`/`Reviewer` subagent**, as well as when a task finishes — you MUST:
 
-1. **Live in-place file (every state change):** Maintain one `progress.md` file and overwrite it in place whenever any task changes phase, round, or active subagent (use the harness artifact `progress.md` if available so it stays pinned in the side pane, otherwise `.agent-team/runs/progress.md`). Do **not** post a new chat message for routine subagent handoffs; update `progress.md` silently and keep working.
-2. **Chat table (on task Done, Blocked, or user check-in):** When a task finishes, hits `⛔ Blocked`, needs human input, or the user asks for status, output **at most 1 short lead-in line** plus this compact table (never prose walls listing who is waiting on whom):
+1. **Update `progress.md` in place** (use the harness artifact `progress.md` if available so it stays pinned in the side pane, otherwise `.agent-team/runs/progress.md`).
+2. **Output ONLY the compact status block below in chat** (no prose sentences like *"TASK-x đã pass verify và đang chờ Reviewer..."*):
 
 ```markdown
 **Plan Progress:** Done `5/10` · Active `3/10` · Remaining `2/10` (Blocked `0`)
@@ -104,11 +104,11 @@ Combine a **live in-place dashboard** with **compact chat tables**:
 | Task | Phase | Round | Active Agent / Note |
 | :--- | :--- | :--- | :--- |
 | `TASK-104` | ✅ Done | r2 | Merged to `main` |
-| `TASK-110` | 🔍 Review | r2 | `Reviewer TASK-110 Round 2` |
-| `TASK-100` | 🧪 Verify | r1 | `verify` running after fixes |
+| `TASK-110` | 🔍 Review | r2 | `Reviewer TASK-110` |
+| `TASK-100` | 🧪 Verify | r1 | `verify` running |
 ```
 
-Phases: `📝 Intake`, `🛠 Code`, `🧪 Verify`, `🔍 Review`, `🚦 Gate`, `✅ Done`, `⛔ Blocked`. Keep `Active Agent / Note` to one short cell.
+Phases: `📝 Intake`, `🛠 Code`, `🧪 Verify`, `🔍 Review`, `🚦 Gate`, `✅ Done`, `⛔ Blocked`. Keep `Active Agent / Note` to one short cell. Prose status narration between tool/subagent waits is **strictly forbidden**.
 
 ## Rules and their reasons
 

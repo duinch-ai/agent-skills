@@ -41,7 +41,7 @@
 1. Single test, then lint/typecheck, then full tests, then the repo audit if it exists
    (commands in `AGENTS.md` and the profile). Never claim done while any fail.
 2. Report tersely: what changed, why, real verification output, what was not verified.
-3. No filler narration.
+3. No filler narration. During multi-task / subagent runs, on **every turn** (including waits for `Coder`, `Reviewer`, or `verify`), update `progress.md` in place and output **only** `**Plan Progress:** Done X/N · Active Y/N · Remaining Z/N (Blocked B)` + a `Task | Phase | Round | Active Agent / Note` Markdown table — never prose status sentences.
 
 ## Lessons (rung ladder)
 On **any** user correction, screenshot bug report, or non-obvious pitfall, pick the strongest

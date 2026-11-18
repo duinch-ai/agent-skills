@@ -82,6 +82,7 @@ anything without `--force`), and prints which reviewer CLIs exist here. Config k
 7. **Deliver.** Open a PR with `gh` or leave the branch; keep the worktree while the PR/MR is open so review feedback can be fixed there, and remove it after the PR/MR is merged (`git worktree remove .worktrees/TASK-n`). When `.agents/task-board.json`
    (or the legacy `.github/project.json`) exists and `task-board` is installed, `gate` automatically runs `project_board.py move TASK-n "Done"` on pass; do not reimplement board sync. Merge, deploy,
    delete and sending messages are one-way doors: the human approves them (unless `auto_merge_tier: "low-risk"` is explicitly enabled for `Risk: low` tasks with a healthy inner loop; see `references/overnight.md`).
+   Whenever a task is done, report overall plan progress in the update (e.g., `done 5/10, in progress 3/10, remaining 2/10` or `blocked`, from `agent_team.py status` or the plan's task list).
 8. **Report.** `agent_team.py report --since 24h` gives the morning view: state per task,
    rounds used, reviewer, inner-loop health (avg rounds, first-pass rate, revert rate), and blocked reasons. `status` is the one-line version.
 9. **Fix the system (rung ladder).** On **any** user correction, screenshot bug report, or non-obvious

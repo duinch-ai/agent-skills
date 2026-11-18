@@ -74,8 +74,9 @@ reviewer prompt (`review.py`) carries the same list.
 2. Report tersely: what changed (grouped by layer or file), why, and the verification
    result with the real command output. Link files; do not paste large code you already
    wrote to disk. State what you could not verify. When working on a multi-task plan or
-   waiting on parallel subagents, render a compact `**Plan Progress:** Done X/N · Active Y/N · Remaining Z/N`
-   header + `Task | Phase | Round | Active Agent / Note` table instead of prose status walls.
+   parallel subagents, update a single `progress.md` in place (artifact or `.agent-team/runs/progress.md`)
+   on every phase change, and in chat render the compact `**Plan Progress:** Done X/N · Active Y/N · Remaining Z/N`
+   header + `Task | Phase | Round | Active Agent / Note` table on task completion, block, or check-in (never prose status walls).
 3. No filler narration ("let me read the file"). Act, then report.
 
 ## 6. Lessons protocol (rung ladder)
